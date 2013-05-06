@@ -140,11 +140,15 @@ fail:
 
 static int get_audio_buffer(AVFrame *frame, int align)
 {
-    int channels = av_get_channel_layout_nb_channels(frame->channel_layout);
+    int channels = frame->ch_layout.nb_channels;
     int planar   = av_sample_fmt_is_planar(frame->format);
     int planes   = planar ? channels : 1;
     int ret, i;
 
+#if FF_API_OLD_CHANNEL_LAYOUT
+    if (!channels)
+        av_channel_layout_from_mask(&frame->ch_layout, frame->channel_layout);
+#endif
     if (!frame->linesize[0]) {
         ret = av_samples_get_buffer_size(&frame->linesize[0], channels,
                                          frame->nb_samples, frame->format,
@@ -194,7 +198,12 @@ int av_frame_get_buffer(AVFrame *frame, int align)
 
     if (frame->width > 0 && frame->height > 0)
         return get_video_buffer(frame, align);
-    else if (frame->nb_samples > 0 && frame->channel_layout)
+    else if (frame->nb_samples > 0 &&
+             (av_channel_layout_check(&frame->ch_layout)
+#if FF_API_OLD_CHANNEL_LAYOUT
+              || frame->channel_layout
+#endif
+             ))
         return get_audio_buffer(frame, align);
 
     return AVERROR(EINVAL);
@@ -207,12 +216,22 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
     dst->format         = src->format;
     dst->width          = src->width;
     dst->height         = src->height;
+#if FF_API_OLD_CHANNEL_LAYOUT
     dst->channel_layout = src->channel_layout;
+#endif
     dst->nb_samples     = src->nb_samples;
+
+    ret = av_channel_layout_copy(&dst->ch_layout, &src->ch_layout);
+    if (ret < 0)
+        return ret;
+#if FF_API_OLD_CHANNEL_LAYOUT
+    if (!src->ch_layout.nb_channels && src->channel_layout)
+        av_channel_layout_from_mask(&dst->ch_layout, src->channel_layout);
+#endif
 
     ret = av_frame_copy_props(dst, src);
     if (ret < 0)
-        return ret;
+        goto fail;
 
     /* duplicate the frame data if it's not refcounted */
     if (!src->buf[0]) {
@@ -264,7 +283,7 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
 
     /* duplicate extended data */
     if (src->extended_data != src->data) {
-        int ch = av_get_channel_layout_nb_channels(src->channel_layout);
+        int ch = dst->ch_layout.nb_channels;
 
         if (!ch) {
             ret = AVERROR(EINVAL);
@@ -319,6 +338,8 @@ void av_frame_unref(AVFrame *frame)
 
     av_buffer_unref(&frame->opaque_ref);
 
+    av_channel_layout_uninit(&frame->ch_layout);
+
     get_frame_defaults(frame);
 }
 
@@ -362,9 +383,11 @@ int av_frame_make_writable(AVFrame *frame)
     tmp.format         = frame->format;
     tmp.width          = frame->width;
     tmp.height         = frame->height;
+#if FF_API_OLD_CHANNEL_LAYOUT
     tmp.channel_layout = frame->channel_layout;
+#endif
     tmp.nb_samples     = frame->nb_samples;
-    ret = av_frame_get_buffer(&tmp, 32);
+    ret = av_channel_layout_copy(&tmp.ch_layout, &frame->ch_layout);
     if (ret < 0)
         return ret;
 
@@ -458,7 +481,12 @@ AVBufferRef *av_frame_get_plane_buffer(AVFrame *frame, int plane)
     int planes, i;
 
     if (frame->nb_samples) {
-        int channels = av_get_channel_layout_nb_channels(frame->channel_layout);
+        int channels = frame->ch_layout.nb_channels;
+
+#if FF_API_OLD_CHANNEL_LAYOUT
+        if (!channels)
+            channels = av_get_channel_layout_nb_channels(frame->channel_layout);
+#endif
         if (!channels)
             return NULL;
         planes = av_sample_fmt_is_planar(frame->format) ? channels : 1;
