@@ -130,7 +130,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 {
     RALFContext *ctx = avctx->priv_data;
     int i, j, k;
-    int ret;
+    int ret, channels;
 
     if (avctx->extradata_size < 24 || memcmp(avctx->extradata, "LSD:", 4)) {
         av_log(avctx, AV_LOG_ERROR, "Extradata is not groovy, dude\n");
@@ -143,17 +143,17 @@ static av_cold int decode_init(AVCodecContext *avctx)
         return AVERROR_PATCHWELCOME;
     }
 
-    avctx->channels    = AV_RB16(avctx->extradata + 8);
+    channels           = AV_RB16(avctx->extradata + 8);
     avctx->sample_rate = AV_RB32(avctx->extradata + 12);
-    if (avctx->channels < 1 || avctx->channels > 2
+    if (channels < 1 || channels > 2
         || avctx->sample_rate < 8000 || avctx->sample_rate > 96000) {
         av_log(avctx, AV_LOG_ERROR, "Invalid coding parameters %d Hz %d ch\n",
-               avctx->sample_rate, avctx->channels);
+               avctx->sample_rate, channels);
         return AVERROR_INVALIDDATA;
     }
     avctx->sample_fmt     = AV_SAMPLE_FMT_S16P;
-    avctx->channel_layout = (avctx->channels == 2) ? AV_CH_LAYOUT_STEREO
-                                                   : AV_CH_LAYOUT_MONO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    av_channel_layout_default(&avctx->ch_layout, channels);
 
     ctx->max_frame_size = AV_RB32(avctx->extradata + 16);
     if (ctx->max_frame_size > (1 << 20) || !ctx->max_frame_size) {
@@ -357,7 +357,7 @@ static int decode_block(AVCodecContext *avctx, BitstreamContext *bc,
         return AVERROR_INVALIDDATA;
     }
 
-    if (avctx->channels > 1)
+    if (avctx->ch_layout.nb_channels > 1)
         dmode = bitstream_read(bc, 2) + 1;
     else
         dmode = 0;
@@ -367,7 +367,7 @@ static int decode_block(AVCodecContext *avctx, BitstreamContext *bc,
     bits[0] = 16;
     bits[1] = (mode[1] == 2) ? 17 : 16;
 
-    for (ch = 0; ch < avctx->channels; ch++) {
+    for (ch = 0; ch < avctx->ch_layout.nb_channels; ch++) {
         if ((ret = decode_channel(ctx, bc, ch, len, mode[ch], bits[ch])) < 0)
             return ret;
         if (ctx->filter_params > 1 && ctx->filter_params != FILTER_RAW) {
