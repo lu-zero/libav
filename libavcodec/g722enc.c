@@ -60,11 +60,6 @@ static av_cold int g722_encode_init(AVCodecContext * avctx)
     G722Context *c = avctx->priv_data;
     int ret;
 
-    if (avctx->channels != 1) {
-        av_log(avctx, AV_LOG_ERROR, "Only mono tracks are allowed.\n");
-        return AVERROR_INVALIDDATA;
-    }
-
     c->band[0].scale_factor = 8;
     c->band[1].scale_factor = 2;
     c->prev_samples_pos = 22;
@@ -393,4 +388,5 @@ AVCodec ff_adpcm_g722_encoder = {
     .capabilities   = AV_CODEC_CAP_SMALL_LAST_FRAME,
     .sample_fmts    = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_S16,
                                                      AV_SAMPLE_FMT_NONE },
+    .ch_layouts     = (const AVChannelLayout[]){ AV_CHANNEL_LAYOUT_MONO, { 0 } },
 };
