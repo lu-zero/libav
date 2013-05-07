@@ -321,7 +321,7 @@ static av_cold int g726_encode_init(AVCodecContext *avctx)
         return AVERROR(EINVAL);
     }
 
-    if(avctx->channels != 1){
+    if (avctx->ch_layout.nb_channels != 1) {
         av_log(avctx, AV_LOG_ERROR, "Only mono is supported\n");
         return AVERROR(EINVAL);
     }
@@ -407,8 +407,8 @@ static av_cold int g726_decode_init(AVCodecContext *avctx)
 {
     G726Context* c = avctx->priv_data;
 
-    avctx->channels       = 1;
-    avctx->channel_layout = AV_CH_LAYOUT_MONO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    avctx->ch_layout      = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
 
     c->code_size = avctx->bits_per_coded_sample;
     if (c->code_size < 2 || c->code_size > 5) {
