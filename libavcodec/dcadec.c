@@ -1000,8 +1000,7 @@ static int dca_filter_channels(DCAContext *s, int block_index, int upsample)
     /* FIXME: This downmixing is probably broken with upsample.
      * Probably totally broken also with XLL in general. */
     /* Downmixing to Stereo */
-    if (s->audio_header.prim_channels + !!s->lfe > 2 &&
-        s->avctx->request_channel_layout == AV_CH_LAYOUT_STEREO) {
+    if (!s->xch_disable) {
         dca_downmix(s->samples_chanptr, s->amode, !!s->lfe, s->downmix_coef,
                     s->channel_order_tab);
     }
@@ -1270,10 +1269,12 @@ static int set_channel_layout(AVCodecContext *avctx, int channels)
     int i;
 
     if (s->amode < 16) {
-        avctx->channel_layout = dca_core_channel_layout[s->amode];
+        uint64_t mask = dca_core_channel_layout[s->amode];
+        static const AVChannelLayout stereo = AV_CHANNEL_LAYOUT_STEREO;
 
         if (s->audio_header.prim_channels + !!s->lfe > 2 &&
-            avctx->request_channel_layout == AV_CH_LAYOUT_STEREO) {
+            !av_channel_layout_compare(&avctx->request_ch_layout,
+                                             &stereo)) {
             /*
              * Neither the core's auxiliary data nor our default tables contain
              * downmix coefficients for the additional channel coded in the XCh
@@ -1283,9 +1284,9 @@ static int set_channel_layout(AVCodecContext *avctx, int channels)
         }
 
         if (s->xch_present && !s->xch_disable) {
-            avctx->channel_layout |= AV_CH_BACK_CENTER;
+            mask |= AV_CH_BACK_CENTER;
             if (s->lfe) {
-                avctx->channel_layout |= AV_CH_LOW_FREQUENCY;
+                mask |= AV_CH_LOW_FREQUENCY;
                 s->channel_order_tab = ff_dca_channel_reorder_lfe_xch[s->amode];
             } else {
                 s->channel_order_tab = ff_dca_channel_reorder_nolfe_xch[s->amode];
@@ -1294,7 +1295,7 @@ static int set_channel_layout(AVCodecContext *avctx, int channels)
             channels       = num_core_channels + !!s->lfe;
             s->xch_present = 0; /* disable further xch processing */
             if (s->lfe) {
-                avctx->channel_layout |= AV_CH_LOW_FREQUENCY;
+                mask |= AV_CH_LOW_FREQUENCY;
                 s->channel_order_tab = ff_dca_channel_reorder_lfe[s->amode];
             } else
                 s->channel_order_tab = ff_dca_channel_reorder_nolfe[s->amode];
@@ -1307,11 +1308,9 @@ static int set_channel_layout(AVCodecContext *avctx, int channels)
             s->channel_order_tab[channels - 1 - !!s->lfe] < 0)
             return AVERROR_INVALIDDATA;
 
-        if (num_core_channels + !!s->lfe > 2 &&
-            avctx->request_channel_layout == AV_CH_LAYOUT_STEREO) {
+        if (!s->xch_disable) {
             channels              = 2;
-            s->output             = s->audio_header.prim_channels == 2 ? s->amode : DCA_STEREO;
-            avctx->channel_layout = AV_CH_LAYOUT_STEREO;
+            s->output             = num_core_channels == 2 ? s->amode : DCA_STEREO;
 
             /* Stereo downmix coefficients
              *
@@ -1353,6 +1352,8 @@ static int set_channel_layout(AVCodecContext *avctx, int channels)
             }
             ff_dlog(s->avctx, "\n");
         }
+        av_channel_layout_uninit(&avctx->ch_layout);
+        av_channel_layout_from_mask(&avctx->ch_layout, mask);
     } else {
         av_log(avctx, AV_LOG_ERROR, "Nonstandard configuration %d !\n", s->amode);
         return AVERROR_INVALIDDATA;
@@ -1378,6 +1379,7 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
     DCAContext *s = avctx->priv_data;
     int channels, full_channels;
     int upsample = 0;
+    int downmix;
 
     s->exss_ext_mask = 0;
     s->xch_present   = 0;
@@ -1420,7 +1422,8 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
     ret = set_channel_layout(avctx, channels);
     if (ret < 0)
         return ret;
-    avctx->channels = channels;
+
+    downmix = avctx->ch_layout.nb_channels < full_channels;
 
     /* get output buffer */
     frame->nb_samples = 256 * (s->sample_blocks / SAMPLES_PER_SUBBAND);
@@ -1451,15 +1454,9 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
             /* If downmixing to stereo, don't decode additional channels.
              * FIXME: Using the xch_disable flag for this doesn't seem right. */
             if (!s->xch_disable)
-                avctx->channels += s->xll_channels - s->xll_residual_channels;
+                avctx->ch_layout.nb_channels += s->xll_channels - s->xll_residual_channels;
         }
     }
-
-    /* FIXME: This is an ugly hack, to just revert to the default
-     * layout if we have additional channels. Need to convert the XLL
-     * channel masks to libav channel_layout mask. */
-    if (av_get_channel_layout_nb_channels(avctx->channel_layout) != avctx->channels)
-        avctx->channel_layout = 0;
 
     if ((ret = ff_get_buffer(avctx, frame, 0)) < 0) {
         av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
@@ -1468,7 +1465,7 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
     samples_flt = (float **) frame->extended_data;
 
     /* allocate buffer for extra channels if downmixing */
-    if (avctx->channels < full_channels) {
+    if (downmix) {
         ret = av_samples_get_buffer_size(NULL, full_channels - channels,
                                          frame->nb_samples,
                                          avctx->sample_fmt, 0);
@@ -1555,10 +1552,14 @@ static av_cold int dca_decode_init(AVCodecContext *avctx)
 
     avctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     /* allow downmixing to stereo */
     if (avctx->channels > 2 &&
         avctx->request_channel_layout == AV_CH_LAYOUT_STEREO)
         avctx->channels = 2;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     return 0;
 }
