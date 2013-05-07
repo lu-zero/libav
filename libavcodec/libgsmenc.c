@@ -41,9 +41,9 @@
 #include "gsm.h"
 
 static av_cold int libgsm_encode_init(AVCodecContext *avctx) {
-    if (avctx->channels > 1) {
+    if (avctx->ch_layout.nb_channels > 1) {
         av_log(avctx, AV_LOG_ERROR, "Mono required for GSM, got %d channels\n",
-               avctx->channels);
+               avctx->ch_layout.nb_channels);
         return -1;
     }
 
