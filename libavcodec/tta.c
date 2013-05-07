@@ -216,9 +216,16 @@ static av_cold int tta_decode_init(AVCodecContext * avctx)
             avpriv_report_missing_feature(s->avctx, "Encrypted TTA");
             return AVERROR_PATCHWELCOME;
         }
-        avctx->channels              =
-        s->channels                  = bitstream_read(&s->bc, 16);
+
+        s->channels = bitstream_read(&s->bc, 16);
+        if (avctx->ch_layout.nb_channels != s->channels) {
+            av_channel_layout_uninit(&avctx->ch_layout);
+            avctx->ch_layout.order       = AV_CHANNEL_ORDER_UNSPEC;
+            avctx->ch_layout.nb_channels = s->channels;
+        }
+
         avctx->bits_per_coded_sample = bitstream_read(&s->bc, 16);
+
         s->bps = (avctx->bits_per_coded_sample + 7) / 8;
         avctx->sample_rate           = bitstream_read(&s->bc, 32);
         s->data_length               = bitstream_read(&s->bc, 32);
@@ -258,7 +265,7 @@ static av_cold int tta_decode_init(AVCodecContext * avctx)
                        (s->last_frame_length ? 1 : 0);
 
         av_log(s->avctx, AV_LOG_DEBUG, "format: %d chans: %d bps: %d rate: %d block: %d\n",
-            s->format, avctx->channels, avctx->bits_per_coded_sample, avctx->sample_rate,
+            s->format, s->channels, avctx->bits_per_coded_sample, avctx->sample_rate,
             avctx->block_align);
         av_log(s->avctx, AV_LOG_DEBUG, "data_length: %d frame_length: %d last: %d total: %d\n",
             s->data_length, s->frame_length, s->last_frame_length, total_frames);
@@ -285,7 +292,7 @@ static av_cold int tta_decode_init(AVCodecContext * avctx)
             if (!s->decode_buffer)
                 return AVERROR(ENOMEM);
         }
-        s->ch_ctx = av_malloc(avctx->channels * sizeof(*s->ch_ctx));
+        s->ch_ctx = av_malloc(s->channels * sizeof(*s->ch_ctx));
         if (!s->ch_ctx) {
             av_freep(&s->decode_buffer);
             return AVERROR(ENOMEM);
