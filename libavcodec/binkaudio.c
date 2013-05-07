@@ -73,6 +73,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     int sample_rate_half;
     int i;
     int frame_len_bits;
+    int channels = avctx->ch_layout.nb_channels;
 
     /* determine frame length */
     if (avctx->sample_rate < 22050) {
@@ -83,24 +84,24 @@ static av_cold int decode_init(AVCodecContext *avctx)
         frame_len_bits = 11;
     }
 
-    if (avctx->channels > MAX_CHANNELS) {
-        av_log(avctx, AV_LOG_ERROR, "too many channels: %d\n", avctx->channels);
+    if (channels > MAX_CHANNELS) {
+        av_log(avctx, AV_LOG_ERROR, "too many channels: %d\n", channels);
         return -1;
     }
-    avctx->channel_layout = avctx->channels == 1 ? AV_CH_LAYOUT_MONO :
-                                                   AV_CH_LAYOUT_STEREO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    av_channel_layout_default(&avctx->ch_layout, channels);
 
     s->version_b = avctx->extradata && avctx->extradata[3] == 'b';
 
     if (avctx->codec->id == AV_CODEC_ID_BINKAUDIO_RDFT) {
         // audio is already interleaved for the RDFT format variant
         avctx->sample_fmt = AV_SAMPLE_FMT_FLT;
-        sample_rate  *= avctx->channels;
+        sample_rate  *= channels;
         s->channels = 1;
         if (!s->version_b)
-            frame_len_bits += av_log2(avctx->channels);
+            frame_len_bits += av_log2(channels);
     } else {
-        s->channels = avctx->channels;
+        s->channels = channels;
         avctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
     }
 
@@ -334,7 +335,7 @@ static int binkaudio_receive_frame(AVCodecContext *avctx, AVFrame *frame)
         av_packet_unref(s->pkt);
     }
 
-    frame->nb_samples = s->block_size / avctx->channels;
+    frame->nb_samples = s->block_size / avctx->ch_layout.nb_channels;
 
     return 0;
 fail:
