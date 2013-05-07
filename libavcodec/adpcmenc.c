@@ -64,11 +64,7 @@ static av_cold int adpcm_encode_init(AVCodecContext *avctx)
     uint8_t *extradata;
     int i;
     int ret = AVERROR(ENOMEM);
-
-    if (avctx->channels > 2) {
-        av_log(avctx, AV_LOG_ERROR, "only stereo or mono is supported\n");
-        return AVERROR(EINVAL);
-    }
+    int channels = avctx->ch_layout.nb_channels;
 
     if (avctx->trellis && (unsigned)avctx->trellis > 16U) {
         av_log(avctx, AV_LOG_ERROR, "invalid trellis size\n");
@@ -94,21 +90,21 @@ static av_cold int adpcm_encode_init(AVCodecContext *avctx)
     case AV_CODEC_ID_ADPCM_IMA_WAV:
         /* each 16 bits sample gives one nibble
            and we have 4 bytes per channel overhead */
-        avctx->frame_size = (BLKSIZE - 4 * avctx->channels) * 8 /
-                            (4 * avctx->channels) + 1;
+        avctx->frame_size = (BLKSIZE - 4 * channels) * 8 /
+                            (4 * channels) + 1;
         /* seems frame_size isn't taken into account...
            have to buffer the samples :-( */
         avctx->block_align = BLKSIZE;
         break;
     case AV_CODEC_ID_ADPCM_IMA_QT:
         avctx->frame_size  = 64;
-        avctx->block_align = 34 * avctx->channels;
+        avctx->block_align = 34 * channels;
         break;
     case AV_CODEC_ID_ADPCM_MS:
         /* each 16 bits sample gives one nibble
            and we have 7 bytes per channel overhead */
-        avctx->frame_size = (BLKSIZE - 7 * avctx->channels) * 2 /
-                             avctx->channels + 2;
+        avctx->frame_size = (BLKSIZE - 7 * channels) * 2 /
+                             channels + 2;
         avctx->block_align    = BLKSIZE;
         if (!(avctx->extradata = av_malloc(32 + AV_INPUT_BUFFER_PADDING_SIZE)))
             goto error;
@@ -122,7 +118,7 @@ static av_cold int adpcm_encode_init(AVCodecContext *avctx)
         }
         break;
     case AV_CODEC_ID_ADPCM_YAMAHA:
-        avctx->frame_size  = BLKSIZE * 2 / avctx->channels;
+        avctx->frame_size  = BLKSIZE * 2 / channels;
         avctx->block_align = BLKSIZE;
         break;
     case AV_CODEC_ID_ADPCM_SWF:
@@ -474,13 +470,14 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
     uint8_t *dst;
     ADPCMEncodeContext *c = avctx->priv_data;
     uint8_t *buf;
+    int channels = avctx->ch_layout.nb_channels;
 
     samples = (const int16_t *)frame->data[0];
     samples_p = (int16_t **)frame->extended_data;
-    st = avctx->channels == 2;
+    st = channels == 2;
 
     if (avctx->codec_id == AV_CODEC_ID_ADPCM_SWF)
-        pkt_size = (2 + avctx->channels * (22 + 4 * (frame->nb_samples - 1)) + 7) / 8;
+        pkt_size = (2 + channels * (22 + 4 * (frame->nb_samples - 1)) + 7) / 8;
     else
         pkt_size = avctx->block_align;
     if ((ret = ff_alloc_packet(avpkt, pkt_size))) {
@@ -496,7 +493,7 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
 
         blocks = (frame->nb_samples - 1) / 8;
 
-        for (ch = 0; ch < avctx->channels; ch++) {
+        for (ch = 0; ch < channels; ch++) {
             ADPCMChannelStatus *status = &c->status[ch];
             status->prev_sample = samples_p[ch][0];
             /* status->step_index = 0;
@@ -508,14 +505,14 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
 
         /* stereo: 4 bytes (8 samples) for left, 4 bytes for right */
         if (avctx->trellis > 0) {
-            FF_ALLOC_OR_GOTO(avctx, buf, avctx->channels * blocks * 8, error);
-            for (ch = 0; ch < avctx->channels; ch++) {
+            FF_ALLOC_OR_GOTO(avctx, buf, channels * blocks * 8, error);
+            for (ch = 0; ch < channels; ch++) {
                 adpcm_compress_trellis(avctx, &samples_p[ch][1],
                                        buf + ch * blocks * 8, &c->status[ch],
                                        blocks * 8, 1);
             }
             for (i = 0; i < blocks; i++) {
-                for (ch = 0; ch < avctx->channels; ch++) {
+                for (ch = 0; ch < channels; ch++) {
                     uint8_t *buf1 = buf + ch * blocks * 8 + i * 8;
                     for (j = 0; j < 8; j += 2)
                         *dst++ = buf1[j] | (buf1[j + 1] << 4);
@@ -524,7 +521,7 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
             av_free(buf);
         } else {
             for (i = 0; i < blocks; i++) {
-                for (ch = 0; ch < avctx->channels; ch++) {
+                for (ch = 0; ch < channels; ch++) {
                     ADPCMChannelStatus *status = &c->status[ch];
                     const int16_t *smp = &samples_p[ch][1 + i * 8];
                     for (j = 0; j < 8; j += 2) {
@@ -542,7 +539,7 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
         PutBitContext pb;
         init_put_bits(&pb, dst, pkt_size * 8);
 
-        for (ch = 0; ch < avctx->channels; ch++) {
+        for (ch = 0; ch < channels; ch++) {
             ADPCMChannelStatus *status = &c->status[ch];
             put_bits(&pb, 9, (status->prev_sample & 0xFFFF) >> 7);
             put_bits(&pb, 7,  status->step_index);
@@ -578,7 +575,7 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
         put_bits(&pb, 2, 2);    // set 4-bit flash adpcm format
 
         // init the encoder state
-        for (i = 0; i < avctx->channels; i++) {
+        for (i = 0; i < channels; i++) {
             // clip step so it fits 6 bits
             c->status[i].step_index = av_clip(c->status[i].step_index, 0, 63);
             put_sbits(&pb, 16, samples[i]);
@@ -588,23 +585,23 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
 
         if (avctx->trellis > 0) {
             FF_ALLOC_OR_GOTO(avctx, buf, 2 * n, error);
-            adpcm_compress_trellis(avctx, samples + avctx->channels, buf,
-                                   &c->status[0], n, avctx->channels);
-            if (avctx->channels == 2)
-                adpcm_compress_trellis(avctx, samples + avctx->channels + 1,
+            adpcm_compress_trellis(avctx, samples + channels, buf,
+                                   &c->status[0], n, channels);
+            if (channels == 2)
+                adpcm_compress_trellis(avctx, samples + channels + 1,
                                        buf + n, &c->status[1], n,
-                                       avctx->channels);
+                                       channels);
             for (i = 0; i < n; i++) {
                 put_bits(&pb, 4, buf[i]);
-                if (avctx->channels == 2)
+                if (channels == 2)
                     put_bits(&pb, 4, buf[n + i]);
             }
             av_free(buf);
         } else {
             for (i = 1; i < frame->nb_samples; i++) {
                 put_bits(&pb, 4, adpcm_ima_compress_sample(&c->status[0],
-                         samples[avctx->channels * i]));
-                if (avctx->channels == 2)
+                         samples[channels * i]));
+                if (channels == 2)
                     put_bits(&pb, 4, adpcm_ima_compress_sample(&c->status[1],
                              samples[2 * i + 1]));
             }
@@ -613,45 +610,45 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
         break;
     }
     case AV_CODEC_ID_ADPCM_MS:
-        for (i = 0; i < avctx->channels; i++) {
+        for (i = 0; i < channels; i++) {
             int predictor = 0;
             *dst++ = predictor;
             c->status[i].coeff1 = ff_adpcm_AdaptCoeff1[predictor];
             c->status[i].coeff2 = ff_adpcm_AdaptCoeff2[predictor];
         }
-        for (i = 0; i < avctx->channels; i++) {
+        for (i = 0; i < channels; i++) {
             if (c->status[i].idelta < 16)
                 c->status[i].idelta = 16;
             bytestream_put_le16(&dst, c->status[i].idelta);
         }
-        for (i = 0; i < avctx->channels; i++)
+        for (i = 0; i < channels; i++)
             c->status[i].sample2= *samples++;
-        for (i = 0; i < avctx->channels; i++) {
+        for (i = 0; i < channels; i++) {
             c->status[i].sample1 = *samples++;
             bytestream_put_le16(&dst, c->status[i].sample1);
         }
-        for (i = 0; i < avctx->channels; i++)
+        for (i = 0; i < channels; i++)
             bytestream_put_le16(&dst, c->status[i].sample2);
 
         if (avctx->trellis > 0) {
-            n = avctx->block_align - 7 * avctx->channels;
+            n = avctx->block_align - 7 * channels;
             FF_ALLOC_OR_GOTO(avctx, buf, 2 * n, error);
-            if (avctx->channels == 1) {
+            if (channels == 1) {
                 adpcm_compress_trellis(avctx, samples, buf, &c->status[0], n,
-                                       avctx->channels);
+                                       channels);
                 for (i = 0; i < n; i += 2)
                     *dst++ = (buf[i] << 4) | buf[i + 1];
             } else {
                 adpcm_compress_trellis(avctx, samples,     buf,
-                                       &c->status[0], n, avctx->channels);
+                                       &c->status[0], n, channels);
                 adpcm_compress_trellis(avctx, samples + 1, buf + n,
-                                       &c->status[1], n, avctx->channels);
+                                       &c->status[1], n, channels);
                 for (i = 0; i < n; i++)
                     *dst++ = (buf[i] << 4) | buf[n + i];
             }
             av_free(buf);
         } else {
-            for (i = 7 * avctx->channels; i < avctx->block_align; i++) {
+            for (i = 7 * channels; i < avctx->block_align; i++) {
                 int nibble;
                 nibble  = adpcm_ms_compress_sample(&c->status[ 0], *samples++) << 4;
                 nibble |= adpcm_ms_compress_sample(&c->status[st], *samples++);
@@ -664,22 +661,22 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
         if (avctx->trellis > 0) {
             FF_ALLOC_OR_GOTO(avctx, buf, 2 * n * 2, error);
             n *= 2;
-            if (avctx->channels == 1) {
+            if (channels == 1) {
                 adpcm_compress_trellis(avctx, samples, buf, &c->status[0], n,
-                                       avctx->channels);
+                                       channels);
                 for (i = 0; i < n; i += 2)
                     *dst++ = buf[i] | (buf[i + 1] << 4);
             } else {
                 adpcm_compress_trellis(avctx, samples,     buf,
-                                       &c->status[0], n, avctx->channels);
+                                       &c->status[0], n, channels);
                 adpcm_compress_trellis(avctx, samples + 1, buf + n,
-                                       &c->status[1], n, avctx->channels);
+                                       &c->status[1], n, channels);
                 for (i = 0; i < n; i++)
                     *dst++ = buf[i] | (buf[n + i] << 4);
             }
             av_free(buf);
         } else
-            for (n *= avctx->channels; n > 0; n--) {
+            for (n *= channels; n > 0; n--) {
                 int nibble;
                 nibble  = adpcm_yamaha_compress_sample(&c->status[ 0], *samples++);
                 nibble |= adpcm_yamaha_compress_sample(&c->status[st], *samples++) << 4;
@@ -705,6 +702,12 @@ static const enum AVSampleFormat sample_fmts_p[] = {
     AV_SAMPLE_FMT_S16P, AV_SAMPLE_FMT_NONE
 };
 
+static const AVChannelLayout ch_layouts[] = {
+    AV_CHANNEL_LAYOUT_MONO,
+    AV_CHANNEL_LAYOUT_STEREO,
+    { 0 },
+};
+
 #define ADPCM_ENCODER(id_, name_, sample_fmts_, long_name_) \
 AVCodec ff_ ## name_ ## _encoder = {                        \
     .name           = #name_,                               \
@@ -716,6 +719,7 @@ AVCodec ff_ ## name_ ## _encoder = {                        \
     .encode2        = adpcm_encode_frame,                   \
     .close          = adpcm_encode_close,                   \
     .sample_fmts    = sample_fmts_,                         \
+    .ch_layouts     = ch_layouts,                           \
 }
 
 ADPCM_ENCODER(AV_CODEC_ID_ADPCM_IMA_QT,  adpcm_ima_qt,  sample_fmts_p, "ADPCM IMA QuickTime");
