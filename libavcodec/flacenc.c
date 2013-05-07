@@ -231,7 +231,7 @@ static av_cold void dprint_compression_options(FlacEncodeContext *s)
 static av_cold int flac_encode_init(AVCodecContext *avctx)
 {
     int freq = avctx->sample_rate;
-    int channels = avctx->channels;
+    int channels = avctx->ch_layout.nb_channels;
     FlacEncodeContext *s = avctx->priv_data;
     int i, level, ret;
     uint8_t *streaminfo;

@@ -408,15 +408,15 @@ static int decode_frame(FLACContext *s)
     }
 
     if (s->channels && fi.channels != s->channels && s->got_streaminfo) {
-        s->channels = s->avctx->channels = fi.channels;
-        ff_flac_set_channel_layout(s->avctx);
+        s->channels = fi.channels;
+        ff_flac_set_channel_layout(s->avctx, s->channels);
         ret = allocate_buffers(s);
         if (ret < 0)
             return ret;
     }
-    s->channels = s->avctx->channels = fi.channels;
-    if (!s->avctx->channel_layout)
-        ff_flac_set_channel_layout(s->avctx);
+    s->channels = fi.channels;
+    if (!s->avctx->ch_layout.nb_channels)
+        ff_flac_set_channel_layout(s->avctx, s->channels);
     s->ch_mode = fi.ch_mode;
 
     if (!s->bps && !fi.bps) {
