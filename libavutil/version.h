@@ -96,6 +96,9 @@
 #ifndef FF_API_CRYPTO_SIZE_T
 #define FF_API_CRYPTO_SIZE_T            (LIBAVUTIL_VERSION_MAJOR < 57)
 #endif
+#ifndef FF_API_OLD_CHANNEL_LAYOUT
+#define FF_API_OLD_CHANNEL_LAYOUT       (LIBAVUTIL_VERSION_MAJOR < 57)
+#endif
 
 
 /**
