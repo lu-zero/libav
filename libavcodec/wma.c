@@ -87,10 +87,10 @@ av_cold int ff_wma_init(AVCodecContext *avctx, int flags2)
     volatile float bps;
     int sample_rate1;
     int coef_vlc_table;
+    int channels = avctx->ch_layout.nb_channels;
 
     if (avctx->sample_rate <= 0 || avctx->sample_rate > 50000 ||
-        avctx->channels    <= 0 || avctx->channels    > 2     ||
-        avctx->bit_rate    <= 0)
+        channels <= 0 || channels > 2 || avctx->bit_rate <= 0)
         return -1;
 
     avpriv_float_dsp_init(&s->fdsp, avctx->flags & AV_CODEC_FLAG_BITEXACT);
@@ -111,7 +111,7 @@ av_cold int ff_wma_init(AVCodecContext *avctx, int flags2)
     if (s->use_variable_block_len) {
         int nb_max, nb;
         nb = ((flags2 >> 3) & 3) + 1;
-        if ((avctx->bit_rate / avctx->channels) >= 32000)
+        if ((avctx->bit_rate / channels) >= 32000)
             nb += 2;
         nb_max = s->frame_len_bits - BLOCK_MIN_BITS;
         if (nb > nb_max)
@@ -139,14 +139,13 @@ av_cold int ff_wma_init(AVCodecContext *avctx, int flags2)
             sample_rate1 = 8000;
     }
 
-    bps                 = (float) avctx->bit_rate /
-                          (float) (avctx->channels * avctx->sample_rate);
+    bps = (float) avctx->bit_rate / (float) (channels * avctx->sample_rate);
     s->byte_offset_bits = av_log2((int) (bps * s->frame_len / 8.0 + 0.5)) + 2;
 
     /* compute high frequency value and choose if noise coding should
      * be activated */
     bps1 = bps;
-    if (avctx->channels == 2)
+    if (channels == 2)
         bps1 = bps * 1.6;
     if (sample_rate1 == 44100) {
         if (bps1 >= 0.61)
@@ -184,7 +183,7 @@ av_cold int ff_wma_init(AVCodecContext *avctx, int flags2)
     }
     ff_dlog(s->avctx, "flags2=0x%x\n", flags2);
     ff_dlog(s->avctx, "version=%d channels=%d sample_rate=%d bitrate=%d block_align=%d\n",
-            s->version, avctx->channels, avctx->sample_rate, avctx->bit_rate,
+            s->version, channels, avctx->sample_rate, avctx->bit_rate,
             avctx->block_align);
     ff_dlog(s->avctx, "bps=%f bps1=%f high_freq=%f bitoffset=%d\n",
             bps, bps1, high_freq, s->byte_offset_bits);
