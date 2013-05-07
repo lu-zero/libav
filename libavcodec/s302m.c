@@ -65,11 +65,15 @@ static int s302m_parse_frame_header(AVCodecContext *avctx, const uint8_t *buf,
     else
         avctx->sample_fmt = AV_SAMPLE_FMT_S16;
 
-    avctx->channels    = channels;
+    if (avctx->ch_layout.nb_channels != channels) {
+        av_channel_layout_uninit(&avctx->ch_layout);
+        avctx->ch_layout.order       = AV_CHANNEL_ORDER_UNSPEC;
+        avctx->ch_layout.nb_channels = channels;
+    }
     avctx->sample_rate = 48000;
-    avctx->bit_rate    = 48000 * avctx->channels * (avctx->bits_per_coded_sample + 4) +
+    avctx->bit_rate    = 48000 * channels * (avctx->bits_per_coded_sample + 4) +
                          32 * (48000 / (buf_size * 8 /
-                                        (avctx->channels *
+                                        (channels *
                                          (avctx->bits_per_coded_sample + 4))));
 
     return frame_size;
@@ -92,13 +96,14 @@ static int s302m_decode_frame(AVCodecContext *avctx, void *data,
 
     /* get output buffer */
     block_size = (avctx->bits_per_coded_sample + 4) / 4;
-    frame->nb_samples = 2 * (buf_size / block_size) / avctx->channels;
+    frame->nb_samples = 2 * (buf_size / block_size) /
+                        avctx->ch_layout.nb_channels;
     if ((ret = ff_get_buffer(avctx, frame, 0)) < 0) {
         av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
         return ret;
     }
 
-    buf_size = (frame->nb_samples * avctx->channels / 2) * block_size;
+    buf_size = (frame->nb_samples * avctx->ch_layout.nb_channels / 2) * block_size;
 
     if (avctx->bits_per_coded_sample == 24) {
         uint32_t *o = (uint32_t *)frame->data[0];
