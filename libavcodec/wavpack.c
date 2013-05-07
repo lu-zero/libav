@@ -1037,8 +1037,6 @@ static int wavpack_decode_block(AVCodecContext *avctx, int block_no,
             default:
                 av_log(avctx, AV_LOG_ERROR, "Invalid channel info size %d\n",
                        size);
-                chan   = avctx->channels;
-                chmask = avctx->channel_layout;
             }
             break;
         case WP_ID_SAMPLE_RATE:
@@ -1104,14 +1102,13 @@ static int wavpack_decode_block(AVCodecContext *avctx, int block_no,
             avctx->sample_rate = wv_rates[sr];
 
         if (multiblock) {
-            if (chan)
-                avctx->channels = chan;
-            if (chmask)
-                avctx->channel_layout = chmask;
+            if (chmask) {
+                av_channel_layout_uninit(&avctx->ch_layout);
+                av_channel_layout_from_mask(&avctx->ch_layout, chmask);
+            }
         } else {
-            avctx->channels       = s->stereo ? 2 : 1;
-            avctx->channel_layout = s->stereo ? AV_CH_LAYOUT_STEREO :
-                                                AV_CH_LAYOUT_MONO;
+            av_channel_layout_uninit(&avctx->ch_layout);
+            av_channel_layout_default(&avctx->ch_layout, s->stereo + 1);
         }
 
         /* get output buffer */
@@ -1122,7 +1119,7 @@ static int wavpack_decode_block(AVCodecContext *avctx, int block_no,
         }
     }
 
-    if (wc->ch_offset + s->stereo >= avctx->channels) {
+    if (wc->ch_offset + s->stereo >= avctx->ch_layout.nb_channels) {
         av_log(avctx, AV_LOG_WARNING, "Too many channels coded in a packet.\n");
         return (avctx->err_recognition & AV_EF_EXPLODE) ? AVERROR_INVALIDDATA : 0;
     }
@@ -1214,7 +1211,7 @@ static int wavpack_decode_frame(AVCodecContext *avctx, void *data,
         buf_size -= frame_size;
     }
 
-    if (s->ch_offset != avctx->channels) {
+    if (s->ch_offset != avctx->ch_layout.nb_channels) {
         av_log(avctx, AV_LOG_ERROR, "Not enough channels coded in a packet.\n");
         return AVERROR_INVALIDDATA;
     }
