@@ -151,11 +151,6 @@ static av_cold int encode_init(AVCodecContext *avctx)
     NellyMoserEncodeContext *s = avctx->priv_data;
     int i, ret;
 
-    if (avctx->channels != 1) {
-        av_log(avctx, AV_LOG_ERROR, "Nellymoser supports only 1 channel\n");
-        return AVERROR(EINVAL);
-    }
-
     if (avctx->sample_rate != 8000 && avctx->sample_rate != 16000 &&
         avctx->sample_rate != 11025 &&
         avctx->sample_rate != 22050 && avctx->sample_rate != 44100 &&
@@ -418,4 +413,5 @@ AVCodec ff_nellymoser_encoder = {
     .capabilities   = AV_CODEC_CAP_SMALL_LAST_FRAME | AV_CODEC_CAP_DELAY,
     .sample_fmts    = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_FLT,
                                                      AV_SAMPLE_FMT_NONE },
+    .ch_layouts     = (const AVChannelLayout[]){ AV_CHANNEL_LAYOUT_MONO, { 0 } },
 };
