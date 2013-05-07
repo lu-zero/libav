@@ -41,6 +41,7 @@ static av_cold int libspeex_decode_init(AVCodecContext *avctx)
     LibSpeexContext *s = avctx->priv_data;
     const SpeexMode *mode;
     SpeexHeader *header = NULL;
+    int channels;
     int spx_mode;
 
     avctx->sample_fmt = AV_SAMPLE_FMT_S16;
@@ -51,10 +52,11 @@ static av_cold int libspeex_decode_init(AVCodecContext *avctx)
             av_log(avctx, AV_LOG_WARNING, "Invalid Speex header\n");
     }
     if (header) {
-        avctx->channels    = header->nb_channels;
+        channels           = header->nb_channels;
         spx_mode           = header->mode;
         speex_header_free(header);
     } else {
+        channels = avctx->ch_layout.nb_channels;
         switch (avctx->sample_rate) {
         case 8000:  spx_mode = 0; break;
         case 16000: spx_mode = 1; break;
@@ -76,14 +78,14 @@ static av_cold int libspeex_decode_init(AVCodecContext *avctx)
     avctx->sample_rate = 8000 << spx_mode;
     s->frame_size      =  160 << spx_mode;
 
-    if (avctx->channels < 1 || avctx->channels > 2) {
+    if (channels < 1 || channels > 2) {
         /* libspeex can handle mono or stereo if initialized as stereo */
         av_log(avctx, AV_LOG_ERROR, "Invalid channel count: %d.\n"
-                                    "Decoding as stereo.\n", avctx->channels);
-        avctx->channels = 2;
+                                    "Decoding as stereo.\n", channels);
+        channels = 2;
     }
-    avctx->channel_layout = avctx->channels == 2 ? AV_CH_LAYOUT_STEREO :
-                                                   AV_CH_LAYOUT_MONO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    av_channel_layout_default(&avctx->ch_layout, channels);
 
     speex_bits_init(&s->bits);
     s->dec_state = speex_decoder_init(mode);
@@ -92,7 +94,7 @@ static av_cold int libspeex_decode_init(AVCodecContext *avctx)
         return -1;
     }
 
-    if (avctx->channels == 2) {
+    if (channels == 2) {
         SpeexCallback callback;
         callback.callback_id = SPEEX_INBAND_STEREO;
         callback.func = speex_std_stereo_request_handler;
@@ -144,7 +146,7 @@ static int libspeex_decode_frame(AVCodecContext *avctx, void *data,
         av_log(avctx, AV_LOG_ERROR, "Error decoding Speex frame.\n");
         return AVERROR_INVALIDDATA;
     }
-    if (avctx->channels == 2)
+    if (avctx->ch_layout.nb_channels == 2)
         speex_decode_stereo_int(output, s->frame_size, &s->stereo);
 
     *got_frame_ptr = 1;
