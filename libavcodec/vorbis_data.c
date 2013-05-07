@@ -56,6 +56,22 @@ const uint64_t ff_vorbis_channel_layouts[9] = {
     0
 };
 
+const AVChannelLayout ff_vorbis_ch_layouts[9] = {
+    AV_CHANNEL_LAYOUT_MONO,
+    AV_CHANNEL_LAYOUT_STEREO,
+    AV_CHANNEL_LAYOUT_SURROUND,
+    AV_CHANNEL_LAYOUT_QUAD,
+    AV_CHANNEL_LAYOUT_5POINT0_BACK,
+    AV_CHANNEL_LAYOUT_5POINT1_BACK,
+    {
+        .nb_channels = 7,
+        .order       = AV_CHANNEL_ORDER_NATIVE,
+        .u.mask      = AV_CH_LAYOUT_5POINT1 | AV_CH_BACK_CENTER,
+    },
+    AV_CHANNEL_LAYOUT_7POINT1,
+    { 0 },
+};
+
 DECLARE_ALIGNED(16, static const float, vwin64)[32] = {
     0.0009460463F, 0.0085006468F, 0.0235352254F, 0.0458950567F,
     0.0753351908F, 0.1115073077F, 0.1539457973F, 0.2020557475F,
