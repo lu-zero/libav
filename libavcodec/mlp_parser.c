@@ -344,17 +344,16 @@ static int mlp_parse(AVCodecParserContext *s,
         avctx->sample_rate = mh.group1_samplerate;
         s->duration = mh.access_unit_size;
 
+        av_channel_layout_uninit(&avctx->ch_layout);
         if (mh.stream_type == 0xbb) {
             /* MLP stream */
             if (avctx->request_channel_layout &&
                 (avctx->request_channel_layout & AV_CH_LAYOUT_STEREO) ==
                 avctx->request_channel_layout &&
                 mh.num_substreams > 1) {
-                avctx->channels       = 2;
-                avctx->channel_layout = AV_CH_LAYOUT_STEREO;
+                avctx->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
             } else {
-                avctx->channels       = mh.channels_mlp;
-                avctx->channel_layout = mh.channel_layout_mlp;
+                av_channel_layout_from_mask(&avctx->ch_layout, mh.channel_layout_mlp);
             }
         } else { /* mh.stream_type == 0xba */
             /* TrueHD stream */
@@ -362,17 +361,14 @@ static int mlp_parse(AVCodecParserContext *s,
                     (avctx->request_channel_layout & AV_CH_LAYOUT_STEREO) ==
                     avctx->request_channel_layout &&
                     mh.num_substreams > 1) {
-                avctx->channels       = 2;
-                avctx->channel_layout = AV_CH_LAYOUT_STEREO;
+                avctx->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
             } else if (!mh.channels_thd_stream2 ||
                        (avctx->request_channel_layout &&
                         (avctx->request_channel_layout & mh.channel_layout_thd_stream1) ==
                         avctx->request_channel_layout)) {
-                avctx->channels       = mh.channels_thd_stream1;
-                avctx->channel_layout = mh.channel_layout_thd_stream1;
+                av_channel_layout_from_mask(&avctx->ch_layout, mh.channel_layout_thd_stream1);
             } else {
-                avctx->channels       = mh.channels_thd_stream2;
-                avctx->channel_layout = mh.channel_layout_thd_stream2;
+                av_channel_layout_from_mask(&avctx->ch_layout, mh.channel_layout_thd_stream2);
             }
         }
 

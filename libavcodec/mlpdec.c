@@ -586,8 +586,8 @@ static int read_restart_header(MLPDecodeContext *m, BitstreamContext *bc,
     }
 
     if (substr == m->max_decoded_substream) {
-        m->avctx->channels       = s->max_matrix_channel + 1;
-        m->avctx->channel_layout = s->ch_layout;
+        av_channel_layout_uninit(&m->avctx->ch_layout);
+        av_channel_layout_from_mask(&m->avctx->ch_layout, s->ch_layout);
         m->dsp.mlp_pack_output = m->dsp.mlp_select_pack_output(s->ch_assign,
                                                                s->output_shift,
                                                                s->max_matrix_channel,
