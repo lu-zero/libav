@@ -1810,12 +1810,12 @@ static av_cold int qdm2_decode_init(AVCodecContext *avctx)
 
     extradata += 8;
 
-    avctx->channels = s->nb_channels = s->channels = AV_RB32(extradata);
+    s->nb_channels = s->channels = AV_RB32(extradata);
     extradata += 4;
     if (s->channels <= 0 || s->channels > MPA_MAX_CHANNELS)
         return AVERROR_INVALIDDATA;
-    avctx->channel_layout = avctx->channels == 2 ? AV_CH_LAYOUT_STEREO :
-                                                   AV_CH_LAYOUT_MONO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    av_channel_layout_default(&avctx->ch_layout, s->channels);
 
     avctx->sample_rate = AV_RB32(extradata);
     extradata += 4;
