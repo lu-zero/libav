@@ -64,8 +64,8 @@ static av_cold int mpc7_decode_init(AVCodecContext * avctx)
     static VLC_TYPE quant_tables[7224][2];
 
     /* Musepack SV7 is always stereo */
-    if (avctx->channels != 2) {
-        avpriv_request_sample(avctx, "%d channels", avctx->channels);
+    if (avctx->ch_layout.nb_channels != 2) {
+        avpriv_request_sample(avctx, "%d channels", avctx->ch_layout.nb_channels);
         return AVERROR_PATCHWELCOME;
     }
 
@@ -96,7 +96,8 @@ static av_cold int mpc7_decode_init(AVCodecContext * avctx)
     c->frames_to_skip = 0;
 
     avctx->sample_fmt = AV_SAMPLE_FMT_S16P;
-    avctx->channel_layout = AV_CH_LAYOUT_STEREO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    avctx->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
 
     if(vlc_initialized) return 0;
     av_log(avctx, AV_LOG_DEBUG, "Initing VLC\n");
