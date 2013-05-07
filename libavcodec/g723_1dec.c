@@ -43,10 +43,10 @@ static av_cold int g723_1_decode_init(AVCodecContext *avctx)
 {
     G723_1_Context *p = avctx->priv_data;
 
-    avctx->channel_layout = AV_CH_LAYOUT_MONO;
     avctx->sample_fmt     = AV_SAMPLE_FMT_S16;
-    avctx->channels       = 1;
     avctx->sample_rate    = 8000;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    avctx->ch_layout      = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
     p->pf_gain            = 1 << 12;
 
     memcpy(p->prev_lsp, dc_lsp, LPC_ORDER * sizeof(*p->prev_lsp));
