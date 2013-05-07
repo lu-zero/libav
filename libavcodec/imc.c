@@ -179,15 +179,17 @@ static av_cold int imc_decode_init(AVCodecContext *avctx)
     IMCContext *q = avctx->priv_data;
     double r1, r2;
 
-    if (avctx->codec_id == AV_CODEC_ID_IMC)
-        avctx->channels = 1;
+    if (avctx->codec_id == AV_CODEC_ID_IMC) {
+        av_channel_layout_uninit(&avctx->ch_layout);
+        avctx->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
+    }
 
-    if (avctx->channels > 2) {
+    if (avctx->ch_layout.nb_channels > 2) {
         avpriv_request_sample(avctx, "Number of channels > 2");
         return AVERROR_PATCHWELCOME;
     }
 
-    for (j = 0; j < avctx->channels; j++) {
+    for (j = 0; j < avctx->ch_layout.nb_channels; j++) {
         q->chctx[j].decoder_reset = 1;
 
         for (i = 0; i < BANDS; i++)
@@ -249,8 +251,6 @@ static av_cold int imc_decode_init(AVCodecContext *avctx)
     ff_bswapdsp_init(&q->bdsp);
     avpriv_float_dsp_init(&q->fdsp, avctx->flags & AV_CODEC_FLAG_BITEXACT);
     avctx->sample_fmt     = AV_SAMPLE_FMT_FLTP;
-    avctx->channel_layout = avctx->channels == 1 ? AV_CH_LAYOUT_MONO
-                                                 : AV_CH_LAYOUT_STEREO;
 
     return 0;
 }
@@ -982,7 +982,7 @@ static int imc_decode_block(AVCodecContext *avctx, IMCContext *q, int ch)
 
     memset(chctx->skipFlags, 0, sizeof(chctx->skipFlags));
 
-    imc_imdct256(q, chctx, avctx->channels);
+    imc_imdct256(q, chctx, avctx->ch_layout.nb_channels);
 
     return 0;
 }
@@ -999,7 +999,7 @@ static int imc_decode_frame(AVCodecContext *avctx, void *data,
 
     LOCAL_ALIGNED_16(uint16_t, buf16, [(IMC_BLOCK_SIZE + AV_INPUT_BUFFER_PADDING_SIZE) / 2]);
 
-    if (buf_size < IMC_BLOCK_SIZE * avctx->channels) {
+    if (buf_size < IMC_BLOCK_SIZE * avctx->ch_layout.nb_channels) {
         av_log(avctx, AV_LOG_ERROR, "frame too small!\n");
         return AVERROR_INVALIDDATA;
     }
@@ -1011,7 +1011,7 @@ static int imc_decode_frame(AVCodecContext *avctx, void *data,
         return ret;
     }
 
-    for (i = 0; i < avctx->channels; i++) {
+    for (i = 0; i < avctx->ch_layout.nb_channels; i++) {
         q->out_samples = (float *)frame->extended_data[i];
 
         q->bdsp.bswap16_buf(buf16, (const uint16_t *) buf, IMC_BLOCK_SIZE / 2);
@@ -1024,14 +1024,14 @@ static int imc_decode_frame(AVCodecContext *avctx, void *data,
             return ret;
     }
 
-    if (avctx->channels == 2) {
+    if (avctx->ch_layout.nb_channels == 2) {
         q->fdsp.butterflies_float((float *)frame->extended_data[0],
                                   (float *)frame->extended_data[1], COEFFS);
     }
 
     *got_frame_ptr = 1;
 
-    return IMC_BLOCK_SIZE * avctx->channels;
+    return IMC_BLOCK_SIZE * avctx->ch_layout.nb_channels;
 }
 
 
