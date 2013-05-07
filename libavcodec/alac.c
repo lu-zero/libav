@@ -559,21 +559,17 @@ static av_cold int alac_decode_init(AVCodecContext * avctx)
     }
     avctx->bits_per_raw_sample = alac->sample_size;
 
-    if (alac->channels < 1) {
+    if (alac->channels < 1 || alac->channels > ALAC_MAX_CHANNELS) {
         av_log(avctx, AV_LOG_WARNING, "Invalid channel count\n");
-        alac->channels = avctx->channels;
-    } else {
-        if (alac->channels > ALAC_MAX_CHANNELS)
-            alac->channels = avctx->channels;
-        else
-            avctx->channels = alac->channels;
+        alac->channels = avctx->ch_layout.nb_channels;
     }
-    if (avctx->channels > ALAC_MAX_CHANNELS) {
-        avpriv_report_missing_feature(avctx, "Channel count %d",
-                                      avctx->channels);
+    if (alac->channels > ALAC_MAX_CHANNELS) {
+        av_log(avctx, AV_LOG_ERROR, "Unsupported channel count: %d\n",
+               alac->channels);
         return AVERROR_PATCHWELCOME;
     }
-    avctx->channel_layout = ff_alac_channel_layouts[alac->channels - 1];
+    av_channel_layout_uninit(&avctx->ch_layout);
+    avctx->ch_layout = ff_alac_ch_layouts[alac->channels - 1];
 
     if ((ret = allocate_buffers(alac)) < 0) {
         av_log(avctx, AV_LOG_ERROR, "Error allocating buffers\n");
