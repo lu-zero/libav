@@ -244,7 +244,7 @@ static int create_vorbis_context(vorbis_enc_context *venc,
     vorbis_enc_mapping *mc;
     int i, book, ret;
 
-    venc->channels    = avctx->channels;
+    venc->channels    = avctx->ch_layout.nb_channels;
     venc->sample_rate = avctx->sample_rate;
     venc->log2_blocksize[0] = venc->log2_blocksize[1] = 11;
 
@@ -1169,7 +1169,7 @@ static av_cold int vorbis_encode_init(AVCodecContext *avctx)
     vorbis_enc_context *venc = avctx->priv_data;
     int ret;
 
-    if (avctx->channels != 2) {
+    if (avctx->ch_layout.nb_channels != 2) {
         av_log(avctx, AV_LOG_ERROR, "Current Libav Vorbis encoder only supports 2 channels.\n");
         return -1;
     }
