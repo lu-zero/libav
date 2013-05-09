@@ -877,9 +877,9 @@ static int update_frame_pool(AVCodecContext *avctx, AVFrame *frame)
         break;
         }
     case AVMEDIA_TYPE_AUDIO: {
-        int ch     = av_get_channel_layout_nb_channels(frame->channel_layout);
+        int ch     = frame->ch_layout.nb_channels;
         int planar = av_sample_fmt_is_planar(frame->format);
-        int planes = planar ? ch : 1;
+        int planes = planar ? avctx->ch_layout.nb_channels : 1;
 
         if (pool->format == frame->format && pool->planes == planes &&
             pool->channels == ch && frame->nb_samples == pool->samples)
@@ -1097,28 +1097,33 @@ int ff_get_buffer(AVCodecContext *avctx, AVFrame *frame, int flags)
             frame->sample_rate    = avctx->sample_rate;
         if (frame->format < 0)
             frame->format         = avctx->sample_fmt;
-        if (!frame->channel_layout) {
-            if (avctx->channel_layout) {
-                 if (av_get_channel_layout_nb_channels(avctx->channel_layout) !=
-                     avctx->channels) {
-                     av_log(avctx, AV_LOG_ERROR, "Inconsistent channel "
-                            "configuration.\n");
-                     return AVERROR(EINVAL);
-                 }
-
-                frame->channel_layout = avctx->channel_layout;
-            } else {
-                if (avctx->channels > FF_SANE_NB_CHANNELS) {
-                    av_log(avctx, AV_LOG_ERROR, "Too many channels: %d.\n",
-                           avctx->channels);
-                    return AVERROR(ENOSYS);
-                }
-
-                frame->channel_layout = av_get_default_channel_layout(avctx->channels);
-                if (!frame->channel_layout)
-                    frame->channel_layout = (1ULL << avctx->channels) - 1;
-            }
+        if (!frame->ch_layout.nb_channels) {
+            ret = av_channel_layout_copy(&frame->ch_layout, &avctx->ch_layout);
+            if (ret < 0)
+                return ret;
         }
+        ret = av_channel_layout_check(&frame->ch_layout);
+        if (ret < 0) {
+            av_log(avctx, AV_LOG_ERROR, "Invalid channel layout.\n");
+            return ret;
+        }
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+        /* set the deprecated channel_layout field for callers
+         * that didn't update to the new API yet */
+        if (frame->ch_layout.nb_channels > FF_SANE_NB_CHANNELS) {
+            av_log(avctx, AV_LOG_ERROR, "Too many channels.\n");
+            return AVERROR(EINVAL);
+        }
+        if (frame->ch_layout.order == AV_CHANNEL_ORDER_NATIVE)
+            frame->channel_layout = frame->ch_layout.u.mask;
+        else {
+            frame->channel_layout = av_get_default_channel_layout(frame->ch_layout.nb_channels);
+            if (!frame->channel_layout)
+                frame->channel_layout = (1ULL << frame->ch_layout.nb_channels) - 1;
+        }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
         break;
     default: return AVERROR(EINVAL);
     }

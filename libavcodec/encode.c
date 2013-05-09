@@ -54,14 +54,19 @@ int ff_alloc_packet(AVPacket *avpkt, int size)
 static int pad_last_frame(AVCodecContext *s, AVFrame **dst, const AVFrame *src)
 {
     AVFrame *frame = NULL;
+    int ch = s->ch_layout.nb_channels;
     int ret;
 
     if (!(frame = av_frame_alloc()))
         return AVERROR(ENOMEM);
 
     frame->format         = src->format;
-    frame->channel_layout = src->channel_layout;
     frame->nb_samples     = s->frame_size;
+
+    ret = av_channel_layout_copy(&frame->ch_layout, &src->ch_layout);
+    if (ret < 0)
+        goto fail;
+
     ret = av_frame_get_buffer(frame, 32);
     if (ret < 0)
         goto fail;
@@ -71,11 +76,11 @@ static int pad_last_frame(AVCodecContext *s, AVFrame **dst, const AVFrame *src)
         goto fail;
 
     if ((ret = av_samples_copy(frame->extended_data, src->extended_data, 0, 0,
-                               src->nb_samples, s->channels, s->sample_fmt)) < 0)
+                               src->nb_samples, ch, s->sample_fmt)) < 0)
         goto fail;
     if ((ret = av_samples_set_silence(frame->extended_data, src->nb_samples,
                                       frame->nb_samples - src->nb_samples,
-                                      s->channels, s->sample_fmt)) < 0)
+                                      ch, s->sample_fmt)) < 0)
         goto fail;
 
     *dst = frame;
@@ -113,7 +118,7 @@ int attribute_align_arg avcodec_encode_audio2(AVCodecContext *avctx,
     /* ensure that extended_data is properly set */
     if (frame && !frame->extended_data) {
         if (av_sample_fmt_is_planar(avctx->sample_fmt) &&
-            avctx->channels > AV_NUM_DATA_POINTERS) {
+            avctx->ch_layout.nb_channels > AV_NUM_DATA_POINTERS) {
             av_log(avctx, AV_LOG_ERROR, "Encoding to a planar sample format, "
                                         "with more than %d channels, but extended_data is not set.\n",
                    AV_NUM_DATA_POINTERS);

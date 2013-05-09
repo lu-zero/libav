@@ -1866,7 +1866,7 @@ static int has_codec_parameters(AVStream *st)
 
     switch (avctx->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
-        val = avctx->sample_rate && avctx->channels;
+        val = avctx->sample_rate && avctx->ch_layout.nb_channels;
         if (st->info->found_decoder >= 0 &&
             avctx->sample_fmt == AV_SAMPLE_FMT_NONE)
             return 0;
