@@ -22,6 +22,7 @@
 #define AVRESAMPLE_INTERNAL_H
 
 #include "libavutil/audio_fifo.h"
+#include "libavutil/channel_layout.h"
 #include "libavutil/log.h"
 #include "libavutil/opt.h"
 #include "libavutil/samplefmt.h"
@@ -53,10 +54,17 @@ typedef struct ChannelMapInfo {
 struct AVAudioResampleContext {
     const AVClass *av_class;        /**< AVClass for logging and AVOptions  */
 
+#if FF_API_OLD_CHANNEL_LAYOUT
     uint64_t in_channel_layout;                 /**< input channel layout   */
+#endif
+    AVChannelLayout in_ch_layout;               /**< input channel layout   */
+
     enum AVSampleFormat in_sample_fmt;          /**< input sample format    */
     int in_sample_rate;                         /**< input sample rate      */
+#if FF_API_OLD_CHANNEL_LAYOUT
     uint64_t out_channel_layout;                /**< output channel layout  */
+#endif
+    AVChannelLayout out_ch_layout;              /**< output channel layout  */
     enum AVSampleFormat out_sample_fmt;         /**< output sample format   */
     int out_sample_rate;                        /**< output sample rate     */
     enum AVSampleFormat internal_sample_fmt;    /**< internal sample format */
@@ -74,8 +82,6 @@ struct AVAudioResampleContext {
     int kaiser_beta;                            /**< beta value for Kaiser window (only applicable if filter_type == AV_FILTER_TYPE_KAISER) */
     enum AVResampleDitherMethod dither_method;  /**< dither method          */
 
-    int in_channels;        /**< number of input channels                   */
-    int out_channels;       /**< number of output channels                  */
     int resample_channels;  /**< number of channels used for resampling     */
     int downmix_needed;     /**< downmixing is needed                       */
     int upmix_needed;       /**< upmixing is needed                         */
