@@ -29,6 +29,7 @@
 
 #include "rational.h"
 #include "avutil.h"
+#include "channel_layout.h"
 #include "dict.h"
 #include "log.h"
 
@@ -225,6 +226,11 @@ enum AVOptionType{
     AV_OPT_TYPE_RATIONAL,
     AV_OPT_TYPE_BINARY,  ///< offset must point to a pointer immediately followed by an int for the length
     AV_OPT_TYPE_DICT,
+    /**
+     * The offset point to an AVChannelLayout, the default is .str, which gets
+     * passed to av_channel_layout_from_string().
+     */
+    AV_OPT_TYPE_CHANNEL_LAYOUT,
     AV_OPT_TYPE_CONST = 128,
 };
 
@@ -499,6 +505,8 @@ int av_opt_set_bin     (void *obj, const char *name, const uint8_t *val, int siz
  * caller still owns val is and responsible for freeing it.
  */
 int av_opt_set_dict_val(void *obj, const char *name, const AVDictionary *val, int search_flags);
+int av_opt_set_channel_layout(void *obj, const char *name,
+                              const AVChannelLayout *channel_layout, int search_flags);
 /**
  * @}
  */
@@ -528,6 +536,8 @@ int av_opt_get_q       (void *obj, const char *name, int search_flags, AVRationa
  */
 int av_opt_get_dict_val(void *obj, const char *name, int search_flags, AVDictionary **out_val);
 
+int av_opt_get_channel_layout(void *obj, const char *name, int search_flags,
+                              AVChannelLayout *channel_layout);
 /**
  * Copy options from src object into dest object.
  *
