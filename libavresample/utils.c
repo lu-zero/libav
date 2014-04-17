@@ -117,7 +117,7 @@ int avresample_open(AVAudioResampleContext *avr)
     }
     if (avr->resample_needed) {
         avr->resample_out_buffer = ff_audio_data_alloc(avr->out_channels,
-                                                       0, avr->internal_sample_fmt,
+                                                       1024, avr->internal_sample_fmt,
                                                        "resample_out_buffer");
         if (!avr->resample_out_buffer) {
             ret = AVERROR(EINVAL);
@@ -350,7 +350,8 @@ int attribute_align_arg avresample_convert(AVAudioResampleContext *avr,
             resample_out = &output_buffer;
         else
             resample_out = avr->resample_out_buffer;
-        av_dlog(avr, "[resample] %s to %s\n", current_buffer->name,
+        av_dlog(avr, "[resample] %s to %s\n",
+                current_buffer ? current_buffer->name : "null",
                 resample_out->name);
         ret = ff_audio_resample(avr->resample, resample_out,
                                 current_buffer);

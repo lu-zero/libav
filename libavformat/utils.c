@@ -357,8 +357,8 @@ int av_probe_input_buffer(AVIOContext *pb, AVInputFormat **fmt,
                           const char *filename, void *logctx,
                           unsigned int offset, unsigned int max_probe_size)
 {
-    AVProbeData pd = { filename ? filename : "", NULL, -offset };
-    unsigned char *buf = NULL;
+    AVProbeData pd = { filename ? filename : "" };
+    uint8_t *buf = NULL;
     int ret = 0, probe_size;
 
     if (!max_probe_size) {
@@ -372,19 +372,16 @@ int av_probe_input_buffer(AVIOContext *pb, AVInputFormat **fmt,
     if (offset >= max_probe_size) {
         return AVERROR(EINVAL);
     }
+    avio_skip(pb, offset);
+    max_probe_size -= offset;
 
     for(probe_size= PROBE_BUF_MIN; probe_size<=max_probe_size && !*fmt;
         probe_size = FFMIN(probe_size<<1, FFMAX(max_probe_size, probe_size+1))) {
         int score = probe_size < max_probe_size ? AVPROBE_SCORE_MAX/4 : 0;
-        int buf_offset = (probe_size == PROBE_BUF_MIN) ? 0 : probe_size>>1;
-
-        if (probe_size < offset) {
-            continue;
-        }
 
         /* read probe data */
         buf = av_realloc(buf, probe_size + AVPROBE_PADDING_SIZE);
-        if ((ret = avio_read(pb, buf + buf_offset, probe_size - buf_offset)) < 0) {
+        if ((ret = avio_read(pb, buf + pd.buf_size, probe_size - pd.buf_size)) < 0) {
             /* fail if error was not end of file, otherwise, lower score */
             if (ret != AVERROR_EOF) {
                 av_free(buf);
@@ -394,7 +391,7 @@ int av_probe_input_buffer(AVIOContext *pb, AVInputFormat **fmt,
             ret = 0;            /* error was end of file, nothing read */
         }
         pd.buf_size += ret;
-        pd.buf = &buf[offset];
+        pd.buf       = buf;
 
         memset(pd.buf + pd.buf_size, 0, AVPROBE_PADDING_SIZE);
 

@@ -131,9 +131,15 @@ const enum AVPixelFormat ff_pixfmt_list_420[] = {
 };
 
 const enum AVPixelFormat ff_hwaccel_pixfmt_list_420[] = {
+#if CONFIG_H264_DXVA2_HWACCEL
     AV_PIX_FMT_DXVA2_VLD,
+#endif
+#if CONFIG_H264_VAAPI_HWACCEL
     AV_PIX_FMT_VAAPI_VLD,
+#endif
+#if CONFIG_H264_VDA_HWACCEL
     AV_PIX_FMT_VDA_VLD,
+#endif
     AV_PIX_FMT_YUV420P,
     AV_PIX_FMT_NONE
 };
@@ -1475,6 +1481,10 @@ int ff_MPV_frame_start(MpegEncContext *s, AVCodecContext *avctx)
                 return i;
             }
             s->last_picture_ptr = &s->picture[i];
+
+            s->last_picture_ptr->f.reference   = 3;
+            s->last_picture_ptr->f.pict_type = AV_PICTURE_TYPE_I;
+
             if (ff_alloc_picture(s, s->last_picture_ptr, 0) < 0) {
                 s->last_picture_ptr = NULL;
                 return -1;
@@ -1493,6 +1503,10 @@ int ff_MPV_frame_start(MpegEncContext *s, AVCodecContext *avctx)
                 return i;
             }
             s->next_picture_ptr = &s->picture[i];
+
+            s->next_picture_ptr->f.reference   = 3;
+            s->next_picture_ptr->f.pict_type = AV_PICTURE_TYPE_I;
+
             if (ff_alloc_picture(s, s->next_picture_ptr, 0) < 0) {
                 s->next_picture_ptr = NULL;
                 return -1;
@@ -1515,8 +1529,12 @@ int ff_MPV_frame_start(MpegEncContext *s, AVCodecContext *avctx)
             s->last_picture_ptr->owner2 = s;
     }
 
-    assert(s->pict_type == AV_PICTURE_TYPE_I || (s->last_picture_ptr &&
-                                                 s->last_picture_ptr->f.data[0]));
+    if (s->pict_type != AV_PICTURE_TYPE_I &&
+        !(s->last_picture_ptr && s->last_picture_ptr->f.data[0])) {
+        av_log(s, AV_LOG_ERROR,
+               "Non-reference picture received and no reference available\n");
+        return AVERROR_INVALIDDATA;
+    }
 
     if (s->picture_structure!= PICT_FRAME && s->out_format != FMT_H264) {
         int i;

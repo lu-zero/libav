@@ -322,6 +322,11 @@ static int truemotion1_decode_header(TrueMotion1Context *s)
         return -1;
     }
 
+    if (header.header_size + 1 > s->size) {
+        av_log(s->avctx, AV_LOG_ERROR, "Input packet too small.\n");
+        return AVERROR_INVALIDDATA;
+    }
+
     /* unscramble the header bytes with a XOR operation */
     for (i = 1; i < header.header_size; i++)
         header_buffer[i - 1] = s->buf[i] ^ s->buf[i + 1];
@@ -512,6 +517,15 @@ hres,vres,i,i%vres (0 < i < 4)
     index = s->index_stream[index_stream_index++] * 4; \
 }
 
+#define INC_INDEX                                                   \
+do {                                                                \
+    if (index >= 1023) {                                            \
+        av_log(s->avctx, AV_LOG_ERROR, "Invalid index value.\n");   \
+        return;                                                     \
+    }                                                               \
+    index++;                                                        \
+} while (0)
+
 #define APPLY_C_PREDICTOR() \
     predictor_pair = s->c_predictor_table[index]; \
     horiz_pred += (predictor_pair >> 1); \
@@ -524,10 +538,10 @@ hres,vres,i,i%vres (0 < i < 4)
             if (predictor_pair & 1) \
                 GET_NEXT_INDEX() \
             else \
-                index++; \
+                INC_INDEX; \
         } \
     } else \
-        index++;
+        INC_INDEX;
 
 #define APPLY_C_PREDICTOR_24() \
     predictor_pair = s->c_predictor_table[index]; \
@@ -541,10 +555,10 @@ hres,vres,i,i%vres (0 < i < 4)
             if (predictor_pair & 1) \
                 GET_NEXT_INDEX() \
             else \
-                index++; \
+                INC_INDEX; \
         } \
     } else \
-        index++;
+        INC_INDEX;
 
 
 #define APPLY_Y_PREDICTOR() \
@@ -559,10 +573,10 @@ hres,vres,i,i%vres (0 < i < 4)
             if (predictor_pair & 1) \
                 GET_NEXT_INDEX() \
             else \
-                index++; \
+                INC_INDEX; \
         } \
     } else \
-        index++;
+        INC_INDEX;
 
 #define APPLY_Y_PREDICTOR_24() \
     predictor_pair = s->y_predictor_table[index]; \
@@ -576,10 +590,10 @@ hres,vres,i,i%vres (0 < i < 4)
             if (predictor_pair & 1) \
                 GET_NEXT_INDEX() \
             else \
-                index++; \
+                INC_INDEX; \
         } \
     } else \
-        index++;
+        INC_INDEX;
 
 #define OUTPUT_PIXEL_PAIR() \
     *current_pixel_pair = *vert_pred + horiz_pred; \

@@ -1,5 +1,55 @@
 Releases are sorted from youngest to oldest.
 
+version 9.12:
+- configure: Update freetype check to follow upstream
+- drawtext: Drop pointless header
+- configure: Support preprocessor macros as header names
+- arm: hpeldsp: fix put_pixels8_y2_{,no_rnd_}armv6
+- qt-faststart: Check offset_count before reading from the moov_atom buffer
+- arm: hpeldsp: prevent overreads in armv6 asm
+- configure: enable PIC on s390(x)
+- ituh263: reject b-frame with pp_time = 0
+- lagarith: reallocate rgb_planes when needed
+- truemotion1: check the header size
+- shorten: pad the internal bitstream buffer
+- samplefmt: avoid integer overflow in av_samples_get_buffer_size()
+- h264: Fix a typo from the previous commit
+- h264: Lower bound check for slice offsets
+- Add missing header to fix compilation after d2a0654
+- configure: Add missing dependency of Snow decoder on videodsp
+- rpza: limit the number of blocks to the total remaining blocks in the frame
+
+
+version 9.11:
+- oggparseogm: check timing variables
+- mathematics: remove asserts from av_rescale_rnd()
+- vc1: Always reset numref when parsing a new frame header.
+- h264: reset num_reorder_frames if it is invalid
+- h264: check that an IDR NAL only contains I slices
+- mov: Free an earlier allocated array if allocating a new one
+- mov: Free intermediate arrays in the normal cleanup function
+- segafilm: fix leaks if reading the header fails
+- h264_cavlc: check the size of the intra PCM data.
+- h263: Check init_get_bits return value
+- cavsdec: check ff_get_buffer() return value
+- cavs: Check for negative cbp
+- avi: DV in AVI must be considered single stream
+- vmnc: Check the cursor dimensions
+- vmnc: Port to bytestream2
+- vmnc: K&R formatting cosmetics
+- flashsv: Check diff_start diff_height values
+- dsputil/pngdsp: fix signed/unsigned type in end comparison (CVE-2013-7010, CVE-2013-7014)
+- lavf: make av_probe_input_buffer more robust (CVE-2012-6618)
+- lavf: use a fixed width type
+- lavf: simplify handling of offset in av_probe_input_buffer()
+- prores: Error out only on surely incomplete ac_coeffs
+- shorten: Fix out-of-array read
+- prores: Add a codepath for decoding errors
+- nut: Fix unchecked allocations
+- avi: directly resync on DV in AVI read failure
+- mov: Don't allocate arrays with av_malloc that will be realloced
+- shorten: Extend fixed_coeffs to properly support pred_order 0
+
 version 9.10:
 - alac: Do bounds checking of lpc_order read from the bitstream
 - ape: Don't allow the seektable to be omitted
