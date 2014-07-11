@@ -119,6 +119,7 @@ Component options:
   --disable-avdevice       disable libavdevice build
   --disable-avcodec        disable libavcodec build
   --disable-avformat       disable libavformat build
+  --disable-avscale        disable libavscale build
   --disable-avutil         disable libavutil build
   --disable-swscale        disable libswscale build
   --disable-avfilter       disable video filter support [no]
@@ -1363,6 +1364,7 @@ LIBRARY_LIST="
     avfilter
     avformat
     avresample
+    avscale
     avutil
     swscale
 "
@@ -2536,6 +2538,7 @@ avfilter_deps="avutil"
 avformat_deps="avcodec avutil"
 avformat_suggest="network"
 avresample_deps="avutil"
+avscale_deps="avutil"
 swscale_deps="avutil"
 
 avcodec_extralibs="pthreads_extralibs libm_extralibs"
@@ -2543,6 +2546,7 @@ avdevice_extralibs="libm_extralibs"
 avformat_extralibs="libm_extralibs"
 avfilter_extralibs="pthreads_extralibs libm_extralibs"
 avresample_extralibs="libm_extralibs"
+avscale_extralibs="libm_extralibs"
 avutil_extralibs="clock_gettime_extralibs cuda_extralibs libm_extralibs libmfx_extralibs nanosleep_extralibs pthreads_extralibs user32_extralibs vaapi_extralibs vaapi_drm_extralibs vaapi_x11_extralibs vdpau_x11_extralibs wincrypt_extralibs"
 swscale_extralibs="libm_extralibs"
 
@@ -4954,7 +4958,7 @@ EOF
 
 # add some linker flags
 check_ldflags -Wl,--warn-common
-check_ldflags -Wl,-rpath-link=libswscale:libavfilter:libavdevice:libavformat:libavcodec:libavutil:libavresample
+check_ldflags -Wl,-rpath-link=libswscale:libavfilter:libavdevice:libavformat:libavcodec:libavutil:libavresample:libavscale
 enabled rpath && add_ldexeflags -Wl,-rpath,$libdir
 test_ldflags -Wl,-Bsymbolic && append SHFLAGS -Wl,-Bsymbolic
 
@@ -5566,6 +5570,7 @@ extralibs_avdevice="$avdevice_extralibs"
 extralibs_avfilter="$avfilter_extralibs"
 extralibs_avresample="$avresample_extralibs"
 extralibs_swscale="$swscale_extralibs"
+extralibs_avscale="$avscale_extralibs"
 EOF
 
 for lib in $LIBRARY_LIST; do
