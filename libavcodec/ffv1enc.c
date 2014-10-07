@@ -559,8 +559,12 @@ static av_cold int init_slices_state(FFV1Context *f)
 static av_cold int ffv1_encode_init(AVCodecContext *avctx)
 {
     FFV1Context *s = avctx->priv_data;
-    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(avctx->pix_fmt);
+    const AVPixFmtDescriptor *desc;
     int i, j, k, m, ret;
+
+    desc = av_pix_fmt_desc_get(avctx->pix_fmt);
+    if (!desc)
+        return AVERROR_BUG;
 
     ffv1_common_init(avctx);
 
@@ -590,31 +594,21 @@ static av_cold int ffv1_encode_init(AVCodecContext *avctx)
     s->ac = avctx->coder_type > 0 ? 2 : 0;
 
     s->plane_count = 3;
+    s->transparency = !!(desc->flags & AV_PIX_FMT_FLAG_ALPHA);
+    s->version = FFMAX(s->version, 1);
     switch (avctx->pix_fmt) {
     case AV_PIX_FMT_YUV444P9:
     case AV_PIX_FMT_YUV422P9:
     case AV_PIX_FMT_YUV420P9:
-        if (!avctx->bits_per_raw_sample)
-            s->bits_per_raw_sample = 9;
     case AV_PIX_FMT_YUV444P10:
     case AV_PIX_FMT_YUV420P10:
     case AV_PIX_FMT_YUV422P10:
         s->packed_at_lsb = 1;
-        if (!avctx->bits_per_raw_sample && !s->bits_per_raw_sample)
-            s->bits_per_raw_sample = 10;
+        /* fall-through */
     case AV_PIX_FMT_GRAY16:
     case AV_PIX_FMT_YUV444P16:
     case AV_PIX_FMT_YUV422P16:
     case AV_PIX_FMT_YUV420P16:
-        if (!avctx->bits_per_raw_sample && !s->bits_per_raw_sample) {
-            s->bits_per_raw_sample = 16;
-        } else if (!s->bits_per_raw_sample) {
-            s->bits_per_raw_sample = avctx->bits_per_raw_sample;
-        }
-        if (s->bits_per_raw_sample <= 8) {
-            av_log(avctx, AV_LOG_ERROR, "bits_per_raw_sample invalid\n");
-            return AVERROR_INVALIDDATA;
-        }
         if (!s->ac && avctx->coder_type == -1) {
             av_log(avctx, AV_LOG_INFO,
                    "bits_per_raw_sample > 8, forcing coder 1\n");
@@ -626,7 +620,7 @@ static av_cold int ffv1_encode_init(AVCodecContext *avctx)
                 "bits_per_raw_sample of more than 8 needs -coder 1 currently\n");
             return AVERROR_INVALIDDATA;
         }
-        s->version = FFMAX(s->version, 1);
+        /* fall-through */
     case AV_PIX_FMT_GRAY8:
     case AV_PIX_FMT_YUV444P:
     case AV_PIX_FMT_YUV440P:
@@ -634,34 +628,21 @@ static av_cold int ffv1_encode_init(AVCodecContext *avctx)
     case AV_PIX_FMT_YUV420P:
     case AV_PIX_FMT_YUV411P:
     case AV_PIX_FMT_YUV410P:
-        s->chroma_planes = desc->nb_components < 3 ? 0 : 1;
-        s->colorspace    = 0;
-        break;
     case AV_PIX_FMT_YUVA444P:
     case AV_PIX_FMT_YUVA422P:
     case AV_PIX_FMT_YUVA420P:
-        s->chroma_planes = 1;
+        s->chroma_planes = desc->nb_components < 3 ? 0 : 1;
         s->colorspace    = 0;
-        s->transparency  = 1;
         break;
     case AV_PIX_FMT_RGB32:
         s->colorspace   = 1;
-        s->transparency = 1;
         break;
     case AV_PIX_FMT_GBRP9:
-        if (!avctx->bits_per_raw_sample)
-            s->bits_per_raw_sample = 9;
     case AV_PIX_FMT_GBRP10:
-        if (!avctx->bits_per_raw_sample && !s->bits_per_raw_sample)
-            s->bits_per_raw_sample = 10;
     case AV_PIX_FMT_GBRP16:
-        if (!avctx->bits_per_raw_sample && !s->bits_per_raw_sample)
-            s->bits_per_raw_sample = 16;
-        else if (!s->bits_per_raw_sample)
-            s->bits_per_raw_sample = avctx->bits_per_raw_sample;
+        s->bits_per_raw_sample = desc->comp[0].depth_minus1 + 1;
         s->colorspace    = 1;
         s->chroma_planes = 1;
-        s->version       = FFMAX(s->version, 1);
         break;
     default:
         av_log(avctx, AV_LOG_ERROR, "format not supported\n");

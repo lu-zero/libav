@@ -624,6 +624,9 @@ static void decode_channel_map(uint8_t layout_map[][3],
         case AAC_CHANNEL_LFE:
             syn_ele = TYPE_LFE;
             break;
+        default:
+            // AAC_CHANNEL_OFF has no channel map
+            return;
         }
         layout_map[0][0] = syn_ele;
         layout_map[0][1] = get_bits(gb, 4);
@@ -1422,7 +1425,7 @@ static void decode_mid_side_stereo(ChannelElement *cpe, GetBitContext *gb,
              idx++)
             cpe->ms_mask[idx] = get_bits1(gb);
     } else if (ms_present == 2) {
-        memset(cpe->ms_mask, 1, cpe->ch[0].ics.num_window_groups * cpe->ch[0].ics.max_sfb * sizeof(cpe->ms_mask[0]));
+        memset(cpe->ms_mask, 1, sizeof(cpe->ms_mask[0]) * cpe->ch[0].ics.num_window_groups * cpe->ch[0].ics.max_sfb);
     }
 }
 

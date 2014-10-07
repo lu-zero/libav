@@ -358,8 +358,11 @@ static inline int parse_command_line(AVFormatContext *s, const char *line,
                                      enum RTSPMethod *methodcode)
 {
     RTSPState *rt = s->priv_data;
-    const char *linept, *searchlinept;
-    linept = strchr(line, ' ');
+    const char *searchlinept;
+    const char *linept = strchr(line, ' ');
+    if (!linept)
+        return AVERROR_INVALIDDATA;
+
     if (linept - line > methodsize - 1) {
         av_log(s, AV_LOG_ERROR, "Method string too long\n");
         return AVERROR(EIO);

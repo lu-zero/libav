@@ -181,7 +181,7 @@ int avfilter_config_links(AVFilterContext *filter)
             }
 
             if (link->time_base.num == 0 && link->time_base.den == 0)
-                link->time_base = link->src && link->src->nb_inputs ?
+                link->time_base = link->src->nb_inputs ?
                     link->src->inputs[0]->time_base : AV_TIME_BASE_Q;
 
             if (link->type == AVMEDIA_TYPE_VIDEO) {

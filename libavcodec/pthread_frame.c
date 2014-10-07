@@ -600,6 +600,7 @@ int ff_frame_thread_init(AVCodecContext *avctx)
 
         p->frame = av_frame_alloc();
         if (!p->frame) {
+            av_free(copy);
             err = AVERROR(ENOMEM);
             goto error;
         }

@@ -559,13 +559,14 @@ static int encode_slice(AVCodecContext *avctx, const AVFrame *pic,
                                           mbs_per_slice, ctx->blocks[0],
                                           num_cblocks, plane_factor,
                                           qmat);
-        } else {
+        } else if (i == 3) {
             get_alpha_data(ctx, src, linesize, xp, yp,
                            pwidth, avctx->height / ctx->pictures_per_frame,
                            ctx->blocks[0], mbs_per_slice, ctx->alpha_bits);
             sizes[i] = encode_alpha_plane(ctx, pb, mbs_per_slice,
                                           ctx->blocks[0], quant);
-        }
+        } else
+            return AVERROR_INVALIDDATA;
         total_size += sizes[i];
         if (put_bits_left(pb) < 0) {
             av_log(avctx, AV_LOG_ERROR,

@@ -129,7 +129,7 @@ static inline int findCode(LZWEncodeState * s, uint8_t c, int hash_prefix)
     int h = hash(FFMAX(hash_prefix, 0), c);
     int hash_offset = hashOffset(h);
 
-    while (s->tab[h].hash_prefix != LZW_PREFIX_FREE) {
+    while (h >= 0 && s->tab[h].hash_prefix != LZW_PREFIX_FREE) {
         if ((s->tab[h].suffix == c)
             && (s->tab[h].hash_prefix == hash_prefix))
             return h;
@@ -238,6 +238,9 @@ int ff_lzw_encode(LZWEncodeState * s, const uint8_t * inbuf, int insize)
     for (i = 0; i < insize; i++) {
         uint8_t c = *inbuf++;
         int code = findCode(s, c, s->last_code);
+        if (code < 0)
+            return AVERROR_INVALIDDATA;
+
         if (s->tab[code].hash_prefix == LZW_PREFIX_FREE) {
             writeCode(s, s->last_code);
             addCode(s, c, s->last_code, code);

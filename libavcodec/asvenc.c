@@ -141,11 +141,12 @@ static inline void asv2_encode_block(ASV1Context *a, int16_t block[64])
                                  a->q_intra_matrix[index + 9] + (1 << 15)) >> 16))
             ccp |= 1;
 
-        assert(i || ccp < 8);
         if (i)
             put_bits(&a->pb, ff_asv_ac_ccp_tab[ccp][1], ff_asv_ac_ccp_tab[ccp][0]);
-        else
+        else if (ccp < 8)
             put_bits(&a->pb, ff_asv_dc_ccp_tab[ccp][1], ff_asv_dc_ccp_tab[ccp][0]);
+        else
+            break;
 
         if (ccp) {
             if (ccp & 8)

@@ -3091,10 +3091,11 @@ static int mov_read_header(AVFormatContext *s)
         MOVStreamContext *sc = st->priv_data;
 
         if (st->codec->codec_type == AVMEDIA_TYPE_SUBTITLE) {
-            if (st->codec->width <= 0 && st->codec->width <= 0) {
+            if (st->codec->width <= 0)
                 st->codec->width  = sc->width;
+            if (st->codec->height <= 0)
                 st->codec->height = sc->height;
-            }
+
             if (st->codec->codec_id == AV_CODEC_ID_DVD_SUBTITLE) {
                 if ((err = mov_rewrite_dvd_sub_extradata(st)) < 0)
                     return err;

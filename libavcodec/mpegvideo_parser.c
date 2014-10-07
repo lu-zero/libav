@@ -32,9 +32,9 @@ struct MpvParseContext {
 };
 
 
-static void mpegvideo_extract_headers(AVCodecParserContext *s,
-                                      AVCodecContext *avctx,
-                                      const uint8_t *buf, int buf_size)
+static int mpegvideo_extract_headers(AVCodecParserContext *s,
+                                     AVCodecContext *avctx,
+                                     const uint8_t *buf, int buf_size)
 {
     struct MpvParseContext *pc = s->priv_data;
     const uint8_t *buf_end = buf + buf_size;
@@ -44,6 +44,7 @@ static void mpegvideo_extract_headers(AVCodecParserContext *s,
     int top_field_first, repeat_first_field, progressive_frame;
     int horiz_size_ext, vert_size_ext, bit_rate_ext;
     int did_set_size=0;
+    int ret;
 //FIXME replace the crap with get_bits()
     s->repeat_pict = 0;
 
@@ -62,7 +63,9 @@ static void mpegvideo_extract_headers(AVCodecParserContext *s,
                 pc->width  = (buf[0] << 4) | (buf[1] >> 4);
                 pc->height = ((buf[1] & 0x0f) << 8) | buf[2];
                 if(!avctx->width || !avctx->height || !avctx->coded_width || !avctx->coded_height){
-                    ff_set_dimensions(avctx, pc->width, pc->height);
+                    ret = ff_set_dimensions(avctx, pc->width, pc->height);
+                    if (ret < 0)
+                        return ret;
                     did_set_size=1;
                 }
                 frame_rate_index = buf[3] & 0xf;
@@ -89,8 +92,11 @@ static void mpegvideo_extract_headers(AVCodecParserContext *s,
                         pc->width  |=(horiz_size_ext << 12);
                         pc->height |=( vert_size_ext << 12);
                         avctx->bit_rate += (bit_rate_ext << 18) * 400;
-                        if(did_set_size)
-                            ff_set_dimensions(avctx, pc->width, pc->height);
+                        if (did_set_size) {
+                            ret = ff_set_dimensions(avctx, pc->width, pc->height);
+                            if (ret < 0)
+                                return ret;
+                        }
                         avctx->time_base.den = pc->frame_rate.den * (frame_rate_ext_n + 1) * 2;
                         avctx->time_base.num = pc->frame_rate.num * (frame_rate_ext_d + 1);
                         avctx->codec_id = AV_CODEC_ID_MPEG2VIDEO;
@@ -138,7 +144,8 @@ static void mpegvideo_extract_headers(AVCodecParserContext *s,
             break;
         }
     }
- the_end: ;
+the_end:
+    return 0;
 }
 
 static int mpegvideo_parse(AVCodecParserContext *s,
@@ -148,7 +155,7 @@ static int mpegvideo_parse(AVCodecParserContext *s,
 {
     struct MpvParseContext *pc1 = s->priv_data;
     ParseContext *pc= &pc1->pc;
-    int next;
+    int next, ret;
 
     if(s->flags & PARSER_FLAG_COMPLETE_FRAMES){
         next= buf_size;
@@ -165,7 +172,9 @@ static int mpegvideo_parse(AVCodecParserContext *s,
     /* we have a full frame : we just parse the first few MPEG headers
        to have the full timing information. The time take by this
        function should be negligible for uncorrupted streams */
-    mpegvideo_extract_headers(s, avctx, buf, buf_size);
+    ret = mpegvideo_extract_headers(s, avctx, buf, buf_size);
+    if (ret < 0)
+        return ret;
     av_dlog(NULL, "pict_type=%d frame_rate=%0.3f repeat_pict=%d\n",
             s->pict_type, (double)avctx->time_base.den / avctx->time_base.num, s->repeat_pict);
 

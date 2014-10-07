@@ -176,7 +176,7 @@ av_cold int ff_rate_control_init(MpegEncContext *s)
 
         /* read stats */
         p = s->avctx->stats_in;
-        for (i = 0; i < rcc->num_entries - s->max_b_frames; i++) {
+        for (i = 0; i < rcc->num_entries - s->max_b_frames && p; i++) {
             RateControlEntry *rce;
             int picture_number;
             int e;

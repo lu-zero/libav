@@ -693,26 +693,19 @@ static int dvbsub_read_8bit_string(uint8_t *destbuf, int dbuf_len,
                 if (run_length == 0) {
                     return pixels_read;
                 }
-
-                if (map_table)
-                    bits = map_table[0];
-                else
-                    bits = 0;
-                while (run_length-- > 0 && pixels_read < dbuf_len) {
-                    *destbuf++ = bits;
-                    pixels_read++;
-                }
             } else {
                 bits = *(*srcbuf)++;
 
                 if (non_mod == 1 && bits == 1)
                     pixels_read += run_length;
-                if (map_table)
-                    bits = map_table[bits];
-                else while (run_length-- > 0 && pixels_read < dbuf_len) {
-                    *destbuf++ = bits;
-                    pixels_read++;
-                }
+            }
+            if (map_table)
+                bits = map_table[0];
+            else
+                bits = 0;
+            while (run_length-- > 0 && pixels_read < dbuf_len) {
+                *destbuf++ = bits;
+                pixels_read++;
             }
         }
     }
@@ -1321,12 +1314,13 @@ static int dvbsub_display_end_segment(AVCodecContext *avctx, const uint8_t *buf,
     }
 
     sub->num_rects = ctx->display_list_size;
+    if (sub->num_rects <= 0)
+        return AVERROR_INVALIDDATA;
 
-    if (sub->num_rects > 0){
-        sub->rects = av_mallocz(sizeof(*sub->rects) * sub->num_rects);
-        for(i=0; i<sub->num_rects; i++)
-            sub->rects[i] = av_mallocz(sizeof(*sub->rects[i]));
-    }
+    sub->rects = av_mallocz_array(sub->num_rects * sub->num_rects,
+                                  sizeof(*sub->rects));
+    if (!sub->rects)
+        return AVERROR(ENOMEM);
 
     i = 0;
 
@@ -1364,9 +1358,18 @@ static int dvbsub_display_end_segment(AVCodecContext *avctx, const uint8_t *buf,
         }
 
         rect->pict.data[1] = av_mallocz(AVPALETTE_SIZE);
+        if (!rect->pict.data[1]) {
+            av_free(sub->rects);
+            return AVERROR(ENOMEM);
+        }
         memcpy(rect->pict.data[1], clut_table, (1 << region->depth) * sizeof(uint32_t));
 
         rect->pict.data[0] = av_malloc(region->buf_size);
+        if (!rect->pict.data[0]) {
+            av_free(rect->pict.data[1]);
+            av_free(sub->rects);
+            return AVERROR(ENOMEM);
+        }
         memcpy(rect->pict.data[0], region->pbuf, region->buf_size);
 
         i++;
@@ -1444,6 +1447,7 @@ static int dvbsub_decode(AVCodecContext *avctx,
                 break;
             case DVBSUB_DISPLAYDEFINITION_SEGMENT:
                 dvbsub_parse_display_definition_segment(avctx, p, segment_length);
+                break;
             case DVBSUB_DISPLAY_SEGMENT:
                 *data_size = dvbsub_display_end_segment(avctx, p, segment_length, sub);
                 break;

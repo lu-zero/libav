@@ -232,10 +232,14 @@ int ff_socket(int af, int type, int proto)
 int ff_listen_bind(int fd, const struct sockaddr *addr,
                    socklen_t addrlen, int timeout, URLContext *h)
 {
-    int ret;
     int reuse = 1;
     struct pollfd lp = { fd, POLLIN, 0 };
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+    int ret, res;
+
+    ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+    if (ret)
+        return ff_neterrno();
+
     ret = bind(fd, addr, addrlen);
     if (ret)
         return ff_neterrno();
@@ -254,7 +258,11 @@ int ff_listen_bind(int fd, const struct sockaddr *addr,
 
     closesocket(fd);
 
-    ff_socket_nonblock(ret, 1);
+    res = ff_socket_nonblock(ret, 1);
+    if (res < 0) {
+        close(ret);
+        return ff_neterrno();
+    }
     return ret;
 }
 
@@ -266,7 +274,9 @@ int ff_listen_connect(int fd, const struct sockaddr *addr,
     int ret;
     socklen_t optlen;
 
-    ff_socket_nonblock(fd, 1);
+    ret = ff_socket_nonblock(fd, 1);
+    if (ret < 0)
+        return ff_neterrno();
 
     while ((ret = connect(fd, addr, addrlen))) {
         ret = ff_neterrno();

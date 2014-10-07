@@ -255,10 +255,10 @@ static int qpel_motion_search(MpegEncContext * s,
         const int r= score_map[(index+ 1                 )&(ME_MAP_SIZE-1)];
         const int b= score_map[(index+(1<<ME_MAP_SHIFT)  )&(ME_MAP_SIZE-1)];
         const int c= score_map[(index                    )&(ME_MAP_SIZE-1)];
-        int best[8];
-        int best_pos[8][2];
+        int best[9];
+        int best_pos[9][2];
 
-        memset(best, 64, sizeof(int)*8);
+        memset(best, 64, sizeof(int) * FF_ARRAY_ELEMS(best));
         if(s->me.dia_size>=2){
             const int tl= score_map[(index-(1<<ME_MAP_SHIFT)-1)&(ME_MAP_SIZE-1)];
             const int bl= score_map[(index+(1<<ME_MAP_SHIFT)-1)&(ME_MAP_SIZE-1)];
@@ -281,7 +281,7 @@ static int qpel_motion_search(MpegEncContext * s,
 //                    if(nx&1) score-=1024*c->penalty_factor;
 //                    if(ny&1) score-=1024*c->penalty_factor;
 
-                    for(i=0; i<8; i++){
+                    for (i = 0; i < FF_ARRAY_ELEMS(best) - 1; i++) {
                         if(score < best[i]){
                             memmove(&best[i+1], &best[i], sizeof(int)*(7-i));
                             memmove(&best_pos[i+1][0], &best_pos[i][0], sizeof(int)*2*(7-i));
@@ -328,7 +328,7 @@ static int qpel_motion_search(MpegEncContext * s,
 //                    if(nx&1) score-=32*c->penalty_factor;
   //                  if(ny&1) score-=32*c->penalty_factor;
 
-                    for(i=0; i<8; i++){
+                    for (i = 0; i < FF_ARRAY_ELEMS(best) - 1; i++) {
                         if(score < best[i]){
                             memmove(&best[i+1], &best[i], sizeof(int)*(7-i));
                             memmove(&best_pos[i+1][0], &best_pos[i][0], sizeof(int)*2*(7-i));
@@ -726,7 +726,7 @@ static int sab_diamond_search(MpegEncContext * s, int *best, int dmin,
 
     qsort(minima, j, sizeof(Minima), minima_cmp);
 
-    for(; j<minima_count; j++){
+    for( ; j < FFMIN(minima_count, FF_ARRAY_ELEMS(minima)); j++) {
         minima[j].height=256*256*256*64;
         minima[j].checked=0;
         minima[j].x= minima[j].y=0;

@@ -340,19 +340,25 @@ static inline void mcdc(uint16_t *dst, uint16_t *src, int log2w,
 static int decode_p_block(FourXContext *f, uint16_t *dst, uint16_t *src,
                           int log2w, int log2h, int stride)
 {
-    const int index = size2index[log2h][log2w];
-    const int h     = 1 << log2h;
-    int code        = get_vlc2(&f->gb,
-                               block_type_vlc[1 - (f->version > 1)][index].table,
-                               BLOCK_TYPE_VLC_BITS, 1);
-    uint16_t *start = f->last_frame_buffer;
-    uint16_t *end   = start + stride * (f->avctx->height - h + 1) - (1 << log2w);
-    int ret;
-    int scale   = 1;
+    int index, h, code, ret, scale = 1;
+    uint16_t *start, *end;
     unsigned dc = 0;
 
-    if (code < 0 || code > 6 || log2w < 0)
+    if (log2h < 0 || log2w < 0)
         return AVERROR_INVALIDDATA;
+
+    index = size2index[log2h][log2w];
+    if (index < 0)
+        return AVERROR_INVALIDDATA;
+
+    h     = 1 << log2h;
+    code  = get_vlc2(&f->gb, block_type_vlc[1 - (f->version > 1)][index].table,
+                     BLOCK_TYPE_VLC_BITS, 1);
+    if (code < 0 || code > 6)
+        return AVERROR_INVALIDDATA;
+
+    start = f->last_frame_buffer;
+    end   = start + stride * (f->avctx->height - h + 1) - (1 << log2w);
 
     if (code == 1) {
         log2h--;
@@ -819,9 +825,6 @@ static int decode_frame(AVCodecContext *avctx, void *data,
         int id, whole_size;
         const int data_size  = buf_size - 20;
         CFrameBuffer *cfrm;
-
-        if (data_size < 0)
-            return AVERROR_INVALIDDATA;
 
         id         = AV_RL32(buf + 12);
         whole_size = AV_RL32(buf + 16);

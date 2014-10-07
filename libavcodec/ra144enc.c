@@ -146,7 +146,7 @@ static void get_match_score(float *work, const float *coefs, float *vect,
     float c, g;
     int i;
 
-    ff_celp_lp_synthesis_filterf(work, coefs, vect, BLOCKSIZE, LPC_ORDER);
+    ff_celp_lp_synthesis_filterf(work, coefs, vect, BLOCKSIZE, LPC_ORDER - 1);
     if (ortho1)
         orthogonalize(work, ortho1);
     if (ortho2)
@@ -220,7 +220,7 @@ static int adaptive_cb_search(const int16_t *adapt_cb, float *work,
      * and remove its contribution from input data.
      */
     create_adapt_vect(exc, adapt_cb, best_vect);
-    ff_celp_lp_synthesis_filterf(work, coefs, exc, BLOCKSIZE, LPC_ORDER);
+    ff_celp_lp_synthesis_filterf(work, coefs, exc, BLOCKSIZE, LPC_ORDER - 1);
     for (i = 0; i < BLOCKSIZE; i++)
         data[i] -= best_gain * work[i];
     return best_vect - BLOCKSIZE / 2 + 1;
@@ -303,7 +303,8 @@ static void fixed_cb_search(float *work, const float *coefs, float *data,
     if (gain) {
         for (i = 0; i < BLOCKSIZE; i++)
             vect[i] = ff_cb1_vects[*cb1_idx][i];
-        ff_celp_lp_synthesis_filterf(work, coefs, vect, BLOCKSIZE, LPC_ORDER);
+        ff_celp_lp_synthesis_filterf(work, coefs, vect, BLOCKSIZE,
+                                     LPC_ORDER - 1);
         if (cba_idx)
             orthogonalize(work, cba_vect);
         for (i = 0; i < BLOCKSIZE; i++)
@@ -351,7 +352,7 @@ static void ra144_encode_subblock(RA144Context *ractx,
      * input data.
      */
     ff_celp_lp_synthesis_filterf(work + LPC_ORDER, coefs, data, BLOCKSIZE,
-                                 LPC_ORDER);
+                                 LPC_ORDER - 1);
     for (i = 0; i < BLOCKSIZE; i++) {
         zero[i] = work[LPC_ORDER + i];
         data[i] = sblock_data[i] - zero[i];
@@ -382,11 +383,11 @@ static void ra144_encode_subblock(RA144Context *ractx,
         cb2[i] = ff_cb2_vects[cb2_idx][i];
     }
     ff_celp_lp_synthesis_filterf(work + LPC_ORDER, coefs, cb1, BLOCKSIZE,
-                                 LPC_ORDER);
+                                 LPC_ORDER - 1);
     memcpy(cb1, work + LPC_ORDER, sizeof(cb1));
     m[1] = (ff_cb1_base[cb1_idx] * rms) >> 8;
     ff_celp_lp_synthesis_filterf(work + LPC_ORDER, coefs, cb2, BLOCKSIZE,
-                                 LPC_ORDER);
+                                 LPC_ORDER - 1);
     memcpy(cb2, work + LPC_ORDER, sizeof(cb2));
     m[2] = (ff_cb2_base[cb2_idx] * rms) >> 8;
     best_error = FLT_MAX;

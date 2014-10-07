@@ -663,7 +663,8 @@ static uint64_t find_subframe_rice_params(FlacEncodeContext *s,
     int pmax = get_max_p_order(s->options.max_partition_order,
                                s->frame.blocksize, pred_order);
 
-    uint64_t bits = 8 + pred_order * sub->obits + 2 + sub->rc.coding_mode;
+    uint64_t bits = 8 + (uint64_t) pred_order * sub->obits +
+                    2 + sub->rc.coding_mode;
     if (sub->type == FLAC_SUBFRAME_LPC)
         bits += 4 + 5 + pred_order * s->options.lpc_coeff_precision;
     bits += calc_rice_params(&sub->rc, pmin, pmax, sub->residual,

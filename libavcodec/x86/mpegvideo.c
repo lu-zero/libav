@@ -39,9 +39,9 @@ static void dct_unquantize_h263_intra_mmx(MpegEncContext *s,
 
     if (!s->h263_aic) {
         if (n < 4)
-            level = block[0] * s->y_dc_scale;
+            level = block[0] * (x86_reg) s->y_dc_scale;
         else
-            level = block[0] * s->c_dc_scale;
+            level = block[0] * (x86_reg) s->c_dc_scale;
         qadd = (qscale - 1) | 1;
     }else{
         qadd = 0;

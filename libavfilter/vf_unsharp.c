@@ -80,7 +80,7 @@ static void apply_unsharp(      uint8_t *dst, int dst_stride,
 
     int32_t res;
     int x, y, z;
-    const uint8_t *src2;
+    const uint8_t *src2 = src;
 
     if (!fp->amount) {
         if (dst_stride == src_stride)

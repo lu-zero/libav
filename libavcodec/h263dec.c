@@ -433,7 +433,9 @@ int ff_h263_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
                                  s->avctx->extradata_size);
             if (ret < 0)
                 return ret;
-            ff_mpeg4_decode_picture_header(avctx->priv_data, &gb);
+            ret = ff_mpeg4_decode_picture_header(avctx->priv_data, &gb);
+            if (ret < 0 && (avctx->err_recognition & AV_EF_EXPLODE))
+                return ret;
         }
         ret = ff_mpeg4_decode_picture_header(avctx->priv_data, &s->gb);
     } else if (CONFIG_H263I_DECODER && s->codec_id == AV_CODEC_ID_H263I) {

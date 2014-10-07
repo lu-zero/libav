@@ -67,7 +67,8 @@ static int tak_parse(AVCodecParserContext *s, AVCodecContext *avctx,
                                            buf_size);
             const uint8_t *tmp_buf = buf;
 
-            ff_combine_frame(pc, END_NOT_FOUND, &tmp_buf, &tmp_buf_size);
+            if (ff_combine_frame(pc, END_NOT_FOUND, &tmp_buf, &tmp_buf_size) != -1)
+                return AVERROR(ENOMEM);
             consumed += tmp_buf_size;
             buf      += tmp_buf_size;
             buf_size -= tmp_buf_size;

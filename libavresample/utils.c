@@ -338,17 +338,7 @@ int attribute_align_arg avresample_convert(AVAudioResampleContext *avr,
     int ret, direct_output;
 
     /* reset internal buffers */
-    if (avr->in_buffer) {
-        avr->in_buffer->nb_samples = 0;
-        ff_audio_data_set_channels(avr->in_buffer,
-                                   avr->in_buffer->allocated_channels);
-    }
-    if (avr->resample_out_buffer) {
-        avr->resample_out_buffer->nb_samples = 0;
-        ff_audio_data_set_channels(avr->resample_out_buffer,
-                                   avr->resample_out_buffer->allocated_channels);
-    }
-    if (avr->out_buffer) {
+    if (avr->out_convert_needed) {
         avr->out_buffer->nb_samples = 0;
         ff_audio_data_set_channels(avr->out_buffer,
                                    avr->out_buffer->allocated_channels);
@@ -399,6 +389,10 @@ int attribute_align_arg avresample_convert(AVAudioResampleContext *avr,
                 return ret;
             current_buffer = avr->out_buffer;
         } else if (avr->in_copy_needed || avr->in_convert_needed) {
+            avr->in_buffer->nb_samples = 0;
+            ff_audio_data_set_channels(avr->in_buffer,
+                                       avr->in_buffer->allocated_channels);
+
             /* if needed, copy or convert input to in_buffer, and downmix if
                applicable */
             if (avr->in_convert_needed) {
@@ -438,6 +432,10 @@ int attribute_align_arg avresample_convert(AVAudioResampleContext *avr,
 
     if (avr->resample_needed) {
         AudioData *resample_out;
+
+        avr->resample_out_buffer->nb_samples = 0;
+        ff_audio_data_set_channels(avr->resample_out_buffer,
+                                   avr->resample_out_buffer->allocated_channels);
 
         if (!avr->out_convert_needed && direct_output && out_samples > 0)
             resample_out = &output_buffer;
@@ -585,9 +583,12 @@ static inline int convert_frame(AVAudioResampleContext *avr,
 
 static inline int available_samples(AVFrame *out)
 {
+    int samples;
     int bytes_per_sample = av_get_bytes_per_sample(out->format);
-    int samples = out->linesize[0] / bytes_per_sample;
+    if (!bytes_per_sample)
+        return AVERROR_INVALIDDATA;
 
+    samples = out->linesize[0] / bytes_per_sample;
     if (av_sample_fmt_is_planar(out->format)) {
         return samples;
     } else {

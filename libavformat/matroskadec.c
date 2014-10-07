@@ -1837,6 +1837,10 @@ static int matroska_read_header(AVFormatContext *s)
         ebml_free(ebml_syntax, &ebml);
         return AVERROR_PATCHWELCOME;
     }
+    if (!ebml.doctype) {
+        av_log(s, AV_LOG_ERROR, "EBML doctype not set!\n");
+        return AVERROR_INVALIDDATA;
+    }
     for (i = 0; i < FF_ARRAY_ELEMS(matroska_doctypes); i++)
         if (!strcmp(ebml.doctype, matroska_doctypes[i]))
             break;
@@ -2132,8 +2136,16 @@ static int matroska_parse_rm_audio(MatroskaDemuxContext *matroska,
     }
 
     while (track->audio.pkt_cnt) {
+        int ret;
         AVPacket *pkt = av_mallocz(sizeof(AVPacket));
-        av_new_packet(pkt, a);
+        if (!pkt)
+            return AVERROR(ENOMEM);
+
+        ret = av_new_packet(pkt, a);
+        if (ret < 0) {
+            av_free(pkt);
+            return ret;
+        }
         memcpy(pkt->data,
                track->audio.buf + a * (h * w / a - track->audio.pkt_cnt--),
                a);
@@ -2265,6 +2277,7 @@ static int matroska_parse_frame(MatroskaDemuxContext *matroska,
     /* XXX: prevent data copy... */
     if (av_new_packet(pkt, pkt_size + offset) < 0) {
         av_free(pkt);
+        av_freep(&pkt_data);
         return AVERROR(ENOMEM);
     }
 

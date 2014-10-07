@@ -84,12 +84,20 @@ static int mpeg4_decode_header(AVCodecParserContext *s1, AVCodecContext *avctx,
     s->current_picture_ptr = &s->current_picture;
 
     if (avctx->extradata_size && pc->first_picture) {
-        init_get_bits(gb, avctx->extradata, avctx->extradata_size * 8);
+        ret = init_get_bits(gb, avctx->extradata, avctx->extradata_size * 8);
+        if (ret < 0)
+            return ret;
         ret = ff_mpeg4_decode_picture_header(dec_ctx, gb);
+        if (ret < 0 && (avctx->err_recognition & AV_EF_EXPLODE))
+            return ret;
     }
 
-    init_get_bits(gb, buf, 8 * buf_size);
+    ret = init_get_bits(gb, buf, 8 * buf_size);
+    if (ret < 0)
+        return ret;
     ret = ff_mpeg4_decode_picture_header(dec_ctx, gb);
+    if (ret < 0)
+        return ret;
     if (s->width && (!avctx->width || !avctx->height ||
                      !avctx->coded_width || !avctx->coded_height)) {
         ret = ff_set_dimensions(avctx, s->width, s->height);

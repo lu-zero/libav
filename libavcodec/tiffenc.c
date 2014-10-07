@@ -123,11 +123,11 @@ static void add_entry(TiffEncoderContext *s, enum TiffTags tag,
     bytestream_put_le16(&entries_ptr, type);
     bytestream_put_le32(&entries_ptr, count);
 
-    if (type_sizes[type] * count <= 4) {
+    if (type_sizes[type] * (int64_t)count <= 4) {
         tnput(&entries_ptr, count, ptr_val, type, 0);
     } else {
         bytestream_put_le32(&entries_ptr, *s->buf - s->buf_start);
-        check_size(s, count * type_sizes2[type]);
+        check_size(s, count * (int64_t)type_sizes2[type]);
         tnput(s->buf, count, ptr_val, type, 0);
     }
 
@@ -214,7 +214,7 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     int bytes_per_row;
     uint32_t res[2]    = { 72, 1 };     // image resolution (72/1)
     uint16_t bpp_tab[] = { 8, 8, 8, 8 };
-    int ret;
+    int ret = 0;
     int is_yuv = 0;
     uint8_t *yuv_line = NULL;
     int shift_h, shift_v;

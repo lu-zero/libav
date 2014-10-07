@@ -481,8 +481,8 @@ static int gxf_packet(AVFormatContext *s, AVPacket *pkt) {
         avio_r8(pb); // reserved
         if (st->codec->codec_id == AV_CODEC_ID_PCM_S24LE ||
             st->codec->codec_id == AV_CODEC_ID_PCM_S16LE) {
-            int first = field_info >> 16;
-            int last  = field_info & 0xffff; // last is exclusive
+            int64_t first = field_info >> 16;
+            int64_t last = field_info & 0xffff; // last is exclusive
             int bps = av_get_bits_per_sample(st->codec->codec_id)>>3;
             if (first <= last && last*bps <= pkt_len) {
                 avio_skip(pb, first*bps);

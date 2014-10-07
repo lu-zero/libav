@@ -74,6 +74,9 @@ static av_cold int init(AVFilterContext *ctx)
     /* parse the list of formats */
     cur = s->pix_fmts;
     for (i = 0; i < nb_formats; i++) {
+        if (!cur)
+            return AVERROR(EINVAL);
+
         sep = strchr(cur, '|');
         if (sep)
             *sep++ = 0;

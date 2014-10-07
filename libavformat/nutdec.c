@@ -461,7 +461,7 @@ static int decode_info_header(NUTContext *nut)
     int64_t value, end;
     char name[256], str_value[1024], type_str[256];
     const char *type;
-    int *event_flags;
+    int *event_flags        = NULL;
     AVChapter *chapter      = NULL;
     AVStream *st            = NULL;
     AVDictionary **metadata = NULL;
@@ -529,7 +529,8 @@ static int decode_info_header(NUTContext *nut)
             }
             if (metadata && av_strcasecmp(name, "Uses") &&
                 av_strcasecmp(name, "Depends") && av_strcasecmp(name, "Replaces")) {
-                *event_flags |= metadata_flag;
+                if (event_flags)
+                    *event_flags |= metadata_flag;
                 av_dict_set(metadata, name, str_value, 0);
             }
         }
@@ -822,7 +823,7 @@ static int decode_frame(NUTContext *nut, AVPacket *pkt, int frame_code)
 {
     AVFormatContext *s = nut->avf;
     AVIOContext *bc    = s->pb;
-    int size, stream_id, discard;
+    int size, stream_id, discard, ret;
     int64_t pts, last_IP_pts;
     StreamContext *stc;
     uint8_t header_idx;
@@ -847,7 +848,9 @@ static int decode_frame(NUTContext *nut, AVPacket *pkt, int frame_code)
         return 1;
     }
 
-    av_new_packet(pkt, size + nut->header_len[header_idx]);
+    ret = av_new_packet(pkt, size + nut->header_len[header_idx]);
+    if (ret < 0)
+        return ret;
     memcpy(pkt->data, nut->header[header_idx], nut->header_len[header_idx]);
     pkt->pos = avio_tell(bc); // FIXME
     avio_read(bc, pkt->data + nut->header_len[header_idx], size);

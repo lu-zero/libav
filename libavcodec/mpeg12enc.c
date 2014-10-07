@@ -546,7 +546,8 @@ static void mpeg1_encode_motion(MpegEncContext *s, int val, int f_or_b_code)
 
 static inline void encode_dc(MpegEncContext *s, int diff, int component)
 {
-    if (((unsigned) (diff + 255)) >= 511) {
+    unsigned int diff_u = diff + 255;
+    if (diff_u >= 511) {
         int index;
 
         if (diff < 0) {
@@ -657,7 +658,7 @@ next_coef:
 }
 
 static av_always_inline void mpeg1_encode_mb_internal(MpegEncContext *s,
-                                                      int16_t block[6][64],
+                                                      int16_t block[8][64],
                                                       int motion_x, int motion_y,
                                                       int mb_block_count)
 {
@@ -934,7 +935,7 @@ static av_always_inline void mpeg1_encode_mb_internal(MpegEncContext *s,
     }
 }
 
-void ff_mpeg1_encode_mb(MpegEncContext *s, int16_t block[6][64],
+void ff_mpeg1_encode_mb(MpegEncContext *s, int16_t block[8][64],
                         int motion_x, int motion_y)
 {
     if (s->chroma_format == CHROMA_420)

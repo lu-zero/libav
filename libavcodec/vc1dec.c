@@ -1917,10 +1917,9 @@ static void vc1_interp_mc(VC1Context *v)
     my   = s->mv[1][0][1];
     uvmx = (mx + ((mx & 3) == 3)) >> 1;
     uvmy = (my + ((my & 3) == 3)) >> 1;
-    if (v->field_mode) {
-        if (v->cur_field_type != v->ref_field_type[1])
-            my   = my   - 2 + 4 * v->cur_field_type;
-            uvmy = uvmy - 2 + 4 * v->cur_field_type;
+    if (v->field_mode && v->cur_field_type != v->ref_field_type[1]) {
+        my   = my   - 2 + 4 * v->cur_field_type;
+        uvmy = uvmy - 2 + 4 * v->cur_field_type;
     }
     if (v->fastuvmc) {
         uvmx = uvmx + ((uvmx < 0) ? -(uvmx & 1) : (uvmx & 1));
@@ -3676,7 +3675,7 @@ static int vc1_decode_p_mb(VC1Context *v)
                     vc1_mc_4mv_chroma(v, 0);
                 v->mb_type[0][s->block_index[i]] = is_intra[i];
                 if (!coded_inter)
-                    coded_inter = !is_intra[i] & is_coded[i];
+                    coded_inter = !is_intra[i] && is_coded[i];
             }
             // if there are no coded blocks then don't do anything more
             dst_idx = 0;
@@ -4570,9 +4569,9 @@ static int vc1_decode_b_mb_intfr(VC1Context *v)
             if (mb_has_coeffs)
                 cbp = 1 + get_vlc2(&v->s.gb, v->cbpcy_vlc->table, VC1_CBPCY_P_VLC_BITS, 2);
             if (!direct) {
-                if (bmvtype == (BMV_TYPE_INTERPOLATED & twomv)) {
+                if (bmvtype == BMV_TYPE_INTERPOLATED && twomv) {
                     v->fourmvbp = get_vlc2(gb, v->fourmvbp_vlc->table, VC1_4MV_BLOCK_PATTERN_VLC_BITS, 1);
-                } else if (bmvtype == (BMV_TYPE_INTERPOLATED | twomv)) {
+                } else if (bmvtype == BMV_TYPE_INTERPOLATED || twomv) {
                     v->twomvbp = get_vlc2(gb, v->twomvbp_vlc->table, VC1_2MV_BLOCK_PATTERN_VLC_BITS, 1);
                 }
             }
@@ -5503,7 +5502,7 @@ static void vc1_sprite_flush(AVCodecContext *avctx)
        Since we can't enforce it, clear to black the missing sprite. This is
        wrong but it looks better than doing nothing. */
 
-    if (f->data[0])
+    if (f && f->data[0])
         for (plane = 0; plane < (s->flags&CODEC_FLAG_GRAY ? 1 : 3); plane++)
             for (i = 0; i < v->sprite_height>>!!plane; i++)
                 memset(f->data[plane] + i * f->linesize[plane],

@@ -169,7 +169,8 @@ static void avconv_cleanup(int ret)
         AVFormatContext *s = of->ctx;
         if (s && s->oformat && !(s->oformat->flags & AVFMT_NOFILE) && s->pb)
             avio_close(s->pb);
-        avformat_free_context(s);
+        if (s)
+            avformat_free_context(s);
         av_dict_free(&of->opts);
 
         av_freep(&output_files[i]);
@@ -250,7 +251,7 @@ static void abort_codec_experimental(AVCodec *c, int encoder)
             "results.\nAdd '-strict experimental' if you want to use it.\n",
             codec_string, c->name);
     codec = encoder ? avcodec_find_encoder(c->id) : avcodec_find_decoder(c->id);
-    if (!(codec->capabilities & CODEC_CAP_EXPERIMENTAL))
+    if (codec && !(codec->capabilities & CODEC_CAP_EXPERIMENTAL))
         av_log(NULL, AV_LOG_FATAL, "Or use the non experimental %s '%s'.\n",
                codec_string, codec->name);
     exit_program(1);
@@ -443,7 +444,7 @@ static void do_subtitle_out(AVFormatContext *s,
     int subtitle_out_max_size = 1024 * 1024;
     int subtitle_out_size, nb, i;
     AVCodecContext *enc;
-    AVPacket pkt;
+    AVPacket pkt = { 0 };
 
     if (pts == AV_NOPTS_VALUE) {
         av_log(NULL, AV_LOG_ERROR, "Subtitle packets must have a pts\n");
@@ -508,7 +509,7 @@ static void do_video_out(AVFormatContext *s,
                          int *frame_size)
 {
     int ret, format_video_sync;
-    AVPacket pkt;
+    AVPacket pkt = { 0 };
     AVCodecContext *enc = ost->enc_ctx;
 
     *frame_size = 0;
@@ -1067,7 +1068,7 @@ static void do_streamcopy(InputStream *ist, OutputStream *ost, const AVPacket *p
     InputFile   *f = input_files [ist->file_index];
     int64_t start_time = (of->start_time == AV_NOPTS_VALUE) ? 0 : of->start_time;
     int64_t ost_tb_start_time = av_rescale_q(start_time, AV_TIME_BASE_Q, ost->st->time_base);
-    AVPacket opkt;
+    AVPacket opkt = { 0 };
 
     av_init_packet(&opkt);
 
@@ -1383,7 +1384,7 @@ static int process_input_packet(InputStream *ist, const AVPacket *pkt)
 
         ist->last_dts = ist->next_dts;
 
-        if (avpkt.size && avpkt.size != pkt->size &&
+        if (pkt && avpkt.size && avpkt.size != pkt->size &&
             !(ist->dec->capabilities & CODEC_CAP_SUBFRAMES)) {
             av_log(NULL, ist->showed_multi_packet_warning ? AV_LOG_VERBOSE : AV_LOG_WARNING,
                    "Multiple frames in a packet from stream %d\n", pkt->stream_index);
@@ -1844,7 +1845,7 @@ static int transcode_init(void)
                 }
             }
 
-            if (!ost->filter &&
+            if (!ost->filter && ist &&
                 (enc_ctx->codec_type == AVMEDIA_TYPE_VIDEO ||
                  enc_ctx->codec_type == AVMEDIA_TYPE_AUDIO)) {
                     FilterGraph *fg;
@@ -1963,7 +1964,9 @@ static int transcode_init(void)
                 av_log(NULL, AV_LOG_WARNING, "The bitrate parameter is set too low."
                                              "It takes bits/s as argument, not kbits/s\n");
         } else {
-            av_opt_set_dict(ost->enc_ctx, &ost->encoder_opts);
+            ret = av_opt_set_dict(ost->enc_ctx, &ost->encoder_opts);
+            if (ret < 0)
+                return ret;
         }
 
         ret = avcodec_copy_context(ost->st->codec, ost->enc_ctx);
@@ -2420,7 +2423,9 @@ static int process_input(void)
     if (pkt.dts != AV_NOPTS_VALUE)
         pkt.dts *= ist->ts_scale;
 
-    if (pkt.dts != AV_NOPTS_VALUE && ist->next_dts != AV_NOPTS_VALUE &&
+    if ((ist->dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO ||
+         ist->dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO) &&
+        pkt.dts != AV_NOPTS_VALUE && ist->next_dts != AV_NOPTS_VALUE &&
         (is->iformat->flags & AVFMT_TS_DISCONT)) {
         int64_t pkt_dts = av_rescale_q(pkt.dts, ist->st->time_base, AV_TIME_BASE_Q);
         int64_t delta   = pkt_dts - ist->next_dts;

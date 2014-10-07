@@ -128,8 +128,14 @@ static int64_t ism_seek(void *opaque, int64_t offset, int whence)
                 return ret;
             }
             av_dict_set(&opts, "truncate", "0", 0);
-            ffurl_open(&os->out2, frag->infofile, AVIO_FLAG_READ_WRITE, &os->ctx->interrupt_callback, &opts);
+            ret = ffurl_open(&os->out2, frag->infofile, AVIO_FLAG_READ_WRITE,
+                             &os->ctx->interrupt_callback, &opts);
             av_dict_free(&opts);
+            if (ret < 0) {
+                os->out2 = os->tail_out;
+                os->tail_out = NULL;
+                return ret;
+            }
             ffurl_seek(os->out, offset - frag->start_pos, SEEK_SET);
             if (os->out2)
                 ffurl_seek(os->out2, offset - frag->start_pos, SEEK_SET);
@@ -574,7 +580,7 @@ static int ism_write_packet(AVFormatContext *s, AVPacket *pkt)
     SmoothStreamingContext *c = s->priv_data;
     AVStream *st = s->streams[pkt->stream_index];
     OutputStream *os = &c->streams[pkt->stream_index];
-    int64_t end_dts = (c->nb_fragments + 1) * c->min_frag_duration;
+    int64_t end_dts = (c->nb_fragments + 1) * (int64_t) c->min_frag_duration;
     int ret;
 
     if (st->first_dts == AV_NOPTS_VALUE)

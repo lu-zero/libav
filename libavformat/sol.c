@@ -51,17 +51,17 @@ static int sol_probe(AVProbeData *p)
 static enum AVCodecID sol_codec_id(int magic, int type)
 {
     if (magic == 0x0B8D)
-    {
-        if (type & SOL_DPCM) return AV_CODEC_ID_SOL_DPCM;
-        else return AV_CODEC_ID_PCM_U8;
-    }
+        if (type & SOL_DPCM)
+            return AV_CODEC_ID_SOL_DPCM;
+        else
+            return AV_CODEC_ID_PCM_U8;
+
     if (type & SOL_DPCM)
-    {
-        if (type & SOL_16BIT) return AV_CODEC_ID_SOL_DPCM;
-        else if (magic == 0x0C8D) return AV_CODEC_ID_SOL_DPCM;
-        else return AV_CODEC_ID_SOL_DPCM;
-    }
-    if (type & SOL_16BIT) return AV_CODEC_ID_PCM_S16LE;
+        return AV_CODEC_ID_SOL_DPCM;
+
+    if (type & SOL_16BIT)
+        return AV_CODEC_ID_PCM_S16LE;
+
     return AV_CODEC_ID_PCM_U8;
 }
 
