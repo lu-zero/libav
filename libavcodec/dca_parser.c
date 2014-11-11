@@ -140,18 +140,19 @@ static int dca_parse(AVCodecParserContext *s, AVCodecContext *avctx,
 {
     DCAParseContext *pc1 = s->priv_data;
     ParseContext *pc = &pc1->pc;
-    int next, duration, sample_rate;
+    int next, duration, sample_rate, ret;
 
     if (s->flags & PARSER_FLAG_COMPLETE_FRAMES) {
         next = buf_size;
     } else {
         next = dca_find_frame_end(pc1, buf, buf_size);
 
-        if (ff_combine_frame(pc, next, &buf, &buf_size) < 0) {
-            *poutbuf      = NULL;
-            *poutbuf_size = 0;
+        ret = ff_combine_packet(pc, next, &buf, &buf_size,
+                                poutbuf, poutbuf_size);
+        if (ret == AVERROR(EAGAIN))
             return buf_size;
-        }
+        if (ret == AVERROR(ENOMEM))
+            return ret;
     }
 
     /* read the duration and sample rate from the frame header */
