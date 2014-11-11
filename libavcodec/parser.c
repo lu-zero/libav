@@ -284,6 +284,20 @@ int ff_combine_frame(ParseContext *pc, int next,
     return 0;
 }
 
+int ff_combine_packet(ParseContext *pc, int next,
+                      const uint8_t **buf, int *buf_size,
+                      const uint8_t **outbuf, int *outbuf_size)
+{
+    int ret = ff_combine_frame(pc, next, buf, buf_size);
+
+    if (ret < 0) {
+        *outbuf      = NULL;
+        *outbuf_size = 0;
+    }
+
+    return ret;
+}
+
 void ff_parse_close(AVCodecParserContext *s)
 {
     ParseContext *pc = s->priv_data;
