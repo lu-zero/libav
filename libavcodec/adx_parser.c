@@ -44,7 +44,7 @@ static int adx_parse(AVCodecParserContext *s1,
     ADXParseContext *s = s1->priv_data;
     ParseContext *pc = &s->pc;
     int next = END_NOT_FOUND;
-    int i;
+    int i, ret;
     uint64_t state = pc->state64;
 
     if (!s->header_size) {
@@ -75,7 +75,11 @@ static int adx_parse(AVCodecParserContext *s1,
             s->remaining -= buf_size;
     }
 
-    if (ff_combine_frame(pc, next, &buf, &buf_size) < 0 || !buf_size) {
+    ret = ff_combine_frame(pc, next, &buf, &buf_size);
+    if (ret == AVERROR(ENOMEM))
+        return ret;
+
+    if (ret == AVERROR(EAGAIN) || !buf_size) {
         *poutbuf      = NULL;
         *poutbuf_size = 0;
         return buf_size;
