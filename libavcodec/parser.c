@@ -245,7 +245,7 @@ int ff_combine_frame(ParseContext *pc, int next,
         pc->buffer = new_buffer;
         memcpy(&pc->buffer[pc->index], *buf, *buf_size);
         pc->index += *buf_size;
-        return -1;
+        return AVERROR(EAGAIN);
     }
 
     *buf_size          =
