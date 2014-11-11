@@ -75,18 +75,19 @@ static int hevc_parse(AVCodecParserContext *s, AVCodecContext *avctx,
                       const uint8_t **poutbuf, int *poutbuf_size,
                       const uint8_t *buf, int buf_size)
 {
-    int next;
+    int next, ret;
     ParseContext *pc = s->priv_data;
 
     if (s->flags & PARSER_FLAG_COMPLETE_FRAMES) {
         next = buf_size;
     } else {
         next = hevc_find_frame_end(s, buf, buf_size);
-        if (ff_combine_frame(pc, next, &buf, &buf_size) < 0) {
-            *poutbuf      = NULL;
-            *poutbuf_size = 0;
+        ret  = ff_combine_packet(pc, next, &buf, &buf_size,
+                                 poutbuf, poutbuf_size);
+        if (ret == AVERROR(EAGAIN))
             return buf_size;
-        }
+        if (ret == AVERROR(ENOMEM))
+            return ret;
     }
 
     *poutbuf      = buf;
