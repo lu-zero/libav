@@ -403,7 +403,7 @@ static int h264_parse(AVCodecParserContext *s,
 {
     H264Context *h   = s->priv_data;
     ParseContext *pc = &h->parse_context;
-    int next;
+    int next, ret;
 
     if (!h->got_first) {
         h->got_first = 1;
@@ -424,12 +424,12 @@ static int h264_parse(AVCodecParserContext *s,
         next = buf_size;
     } else {
         next = h264_find_frame_end(h, buf, buf_size);
-
-        if (ff_combine_frame(pc, next, &buf, &buf_size) < 0) {
-            *poutbuf      = NULL;
-            *poutbuf_size = 0;
+        ret  = ff_combine_packet(pc, next, &buf, &buf_size,
+                                 poutbuf, poutbuf_size);
+        if (ret == AVERROR(EAGAIN))
             return buf_size;
-        }
+        if (ret == AVERROR(ENOMEM))
+            return ret;
 
         if (next < 0 && next != END_NOT_FOUND) {
             assert(pc->last_index + next >= 0);
