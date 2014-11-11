@@ -35,6 +35,7 @@ int ff_aac_ac3_parse(AVCodecParserContext *s1,
     ParseContext *pc      = &s->pc;
     int len, i;
     int new_frame_start;
+    int ret;
 
 get_next:
     i = END_NOT_FOUND;
@@ -65,12 +66,13 @@ get_next:
         }
     }
 
-    if (ff_combine_frame(pc, i, &buf, &buf_size) < 0) {
+    ret = ff_combine_packet(pc, i, &buf, &buf_size, poutbuf, poutbuf_size);
+    if (ret == AVERROR(EAGAIN)) {
         s->remaining_size -= FFMIN(s->remaining_size, buf_size);
-        *poutbuf           = NULL;
-        *poutbuf_size      = 0;
         return buf_size;
     }
+    if (ret == AVERROR(ENOMEM))
+        return ret;
 
     *poutbuf      = buf;
     *poutbuf_size = buf_size;
