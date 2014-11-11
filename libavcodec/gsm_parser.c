@@ -41,7 +41,7 @@ static int gsm_parse(AVCodecParserContext *s1, AVCodecContext *avctx,
 {
     GSMParseContext *s = s1->priv_data;
     ParseContext *pc = &s->pc;
-    int next;
+    int next, ret;
 
     if (!s->block_size) {
         switch (avctx->codec_id) {
@@ -69,7 +69,10 @@ static int gsm_parse(AVCodecParserContext *s1, AVCodecContext *avctx,
         s->remaining -= buf_size;
     }
 
-    if (ff_combine_frame(pc, next, &buf, &buf_size) < 0 || !buf_size) {
+    ret = ff_combine_frame(pc, next, &buf, &buf_size);
+    if (ret == AVERROR(ENOMEM))
+        return ret;
+    if (ret == AVERROR(EAGAIN) || !buf_size) {
         *poutbuf      = NULL;
         *poutbuf_size = 0;
         return buf_size;
