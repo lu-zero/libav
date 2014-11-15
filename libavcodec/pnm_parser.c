@@ -73,11 +73,15 @@ retry:
             next = END_NOT_FOUND;
     }
 
-    if (ff_combine_frame(pc, next, &buf, &buf_size) < 0) {
-        *poutbuf      = NULL;
-        *poutbuf_size = 0;
+    ret = ff_combine_frame(pc, next, &buf, &buf_size,
+                            poutbuf, poutbuf_size);
+
+    if (ret == AVERROR(EAGAIN))
         return buf_size;
-    }
+
+    if (ret == AVERROR(ENOMEM))
+        return ret;
+    
     *poutbuf      = buf;
     *poutbuf_size = buf_size;
     return next;
