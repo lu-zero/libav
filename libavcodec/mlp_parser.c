@@ -248,8 +248,17 @@ static int mlp_parse(AVCodecParserContext *s,
             }
         }
 
+
+        ret = ff_combine_frame(&mp->pc, END_NOT_FOUND, &buf, &buf_size,
+                               poutbuf, poutbuf_size);
+
+        if (ret == AVERROR(EAGAIN))
+            return buf_size;
+
+        if (ret == AVERROR(ENOMEM))
+            return ret;
+
         if (!mp->in_sync) {
-            ff_combine_frame(&mp->pc, END_NOT_FOUND, &buf, &buf_size);
             return buf_size;
         }
 
@@ -266,6 +275,15 @@ static int mlp_parse(AVCodecParserContext *s,
             mp->pc.buffer[mp->pc.index++]= mp->pc.buffer[mp->pc.overread_index++];
         }
 
+        ret = ff_combine_frame(&mp->pc, next, &buf, &buf_size,
+                               poutbuf, poutbuf_size);
+
+        if (ret == AVERROR(EAGAIN))
+            return buf_size;
+
+        if (ret == AVERROR(ENOMEM))
+            return ret;
+
         if (mp->pc.index + buf_size < 2) {
             ff_combine_frame(&mp->pc, END_NOT_FOUND, &buf, &buf_size);
             return buf_size;
@@ -279,10 +297,15 @@ static int mlp_parse(AVCodecParserContext *s,
 
     next = (mp->bytes_left > buf_size) ? END_NOT_FOUND : mp->bytes_left;
 
-    if (ff_combine_frame(&mp->pc, next, &buf, &buf_size) < 0) {
+    ret = ff_combine_frame(pc, next, &buf, &buf_size,
+            poutbuf, poutbuf_size);
+
+    if (ret == AVERROR(EAGAIN))
         mp->bytes_left -= buf_size;
         return buf_size;
-    }
+
+    if (ret == AVERROR(ENOMEM))
+        return ret;
 
     mp->bytes_left = 0;
 
