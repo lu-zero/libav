@@ -94,11 +94,12 @@ static int latm_parse(AVCodecParserContext *s1, AVCodecContext *avctx,
     } else {
         next = latm_find_frame_end(s1, buf, buf_size);
 
-        if (ff_combine_frame(pc, next, &buf, &buf_size) < 0) {
-            *poutbuf      = NULL;
-            *poutbuf_size = 0;
+        ret  = ff_combine_frame(pc, next, &buf, &buf_size,
+                                poutbuf, poutbuf_size);
+        if (ret == AVERROR(EAGAIN))
             return buf_size;
-        }
+        if (ret == AVERROR(ENOMEM))
+            return ret;
     }
     *poutbuf      = buf;
     *poutbuf_size = buf_size;

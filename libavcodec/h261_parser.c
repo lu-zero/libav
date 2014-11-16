@@ -69,14 +69,16 @@ static int h261_parse(AVCodecParserContext *s,
                       const uint8_t *buf, int buf_size)
 {
     ParseContext *pc = s->priv_data;
-    int next;
+    int next, ret;
 
     next = h261_find_frame_end(pc, avctx, buf, buf_size);
-    if (ff_combine_frame(pc, next, &buf, &buf_size) < 0) {
-        *poutbuf      = NULL;
-        *poutbuf_size = 0;
+    ret  = ff_combine_packet(pc, next, &buf, &buf_size,
+                             poutbuf, poutbuf_size);
+    if (ret == AVERROR(EAGAIN))
         return buf_size;
-    }
+    if (ret == AVERROR(ENOMEM))
+        return ret;
+
     *poutbuf      = buf;
     *poutbuf_size = buf_size;
     return next;

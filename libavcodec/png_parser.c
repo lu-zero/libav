@@ -106,9 +106,15 @@ static int png_parse(AVCodecParserContext *s, AVCodecContext *avctx,
     }
 
 flush:
-    if (ff_combine_frame(&ppc->pc, next, &buf, &buf_size) < 0)
+    ret = ff_combine_frame(pc, next, &buf, &buf_size,
+                            poutbuf, poutbuf_size);
+
+    if (ret == AVERROR(EAGAIN))
         return buf_size;
 
+    if (ret == AVERROR(ENOMEM))
+        return ret;
+    
     ppc->chunk_pos = ppc->pc.frame_start_found = 0;
 
     *poutbuf      = buf;

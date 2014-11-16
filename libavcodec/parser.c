@@ -245,7 +245,7 @@ int ff_combine_frame(ParseContext *pc, int next,
         pc->buffer = new_buffer;
         memcpy(&pc->buffer[pc->index], *buf, *buf_size);
         pc->index += *buf_size;
-        return -1;
+        return AVERROR(EAGAIN);
     }
 
     *buf_size          =
@@ -282,6 +282,20 @@ int ff_combine_frame(ParseContext *pc, int next,
     }
 
     return 0;
+}
+
+int ff_combine_packet(ParseContext *pc, int next,
+                      const uint8_t **buf, int *buf_size,
+                      const uint8_t **outbuf, int *outbuf_size)
+{
+    int ret = ff_combine_frame(pc, next, buf, buf_size);
+
+    if (ret < 0) {
+        *outbuf      = NULL;
+        *outbuf_size = 0;
+    }
+
+    return ret;
 }
 
 void ff_parse_close(AVCodecParserContext *s)

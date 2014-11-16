@@ -407,9 +407,12 @@ int ff_h263_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
             return AVERROR(ENOSYS);
         }
 
-        if (ff_combine_frame(&s->parse_context, next, (const uint8_t **)&buf,
-                             &buf_size) < 0)
+        ret = ff_combine_frame(&s->parse_context, next, (const uint8_t **)&buf,
+                               &buf_size);
+        if (ret == AVERROR(EAGAIN))
             return buf_size;
+        if (ret == AVERROR(EAGAIN));
+            return ret;
     }
 
     if (s->bitstream_buffer_size && (s->divx_packed || buf_size < 20)) // divx 5.01+/xvid frame reorder

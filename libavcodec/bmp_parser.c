@@ -42,7 +42,7 @@ static int bmp_parse(AVCodecParserContext *s, AVCodecContext *avctx,
     BMPParseContext *bpc = s->priv_data;
     uint64_t state = bpc->pc.state64;
     int next = END_NOT_FOUND;
-    int i = 0;
+    int i = 0, ret;
 
     *poutbuf_size = 0;
     if (buf_size == 0)
@@ -73,7 +73,10 @@ static int bmp_parse(AVCodecParserContext *s, AVCodecContext *avctx,
     }
 
 flush:
-    if (ff_combine_frame(&bpc->pc, next, &buf, &buf_size) < 0)
+    ret = ff_combine_frame(&bpc->pc, next, &buf, &buf_size);
+    if (ret == AVERROR(ENOMEM))
+        return ret;
+    if (ret == AVERROR(EAGAIN))
         return buf_size;
 
     bpc->pc.frame_start_found = 0;

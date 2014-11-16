@@ -2632,9 +2632,15 @@ static int mpeg_decode_frame(AVCodecContext *avctx, void *data,
         int next = ff_mpeg1_find_frame_end(&s2->parse_context, buf,
                                            buf_size, NULL);
 
-        if (ff_combine_frame(&s2->parse_context, next,
-                             (const uint8_t **) &buf, &buf_size) < 0)
+        ret = ff_combine_frame(&s2->parse_context, next, 
+                               (const uint8_t **) &buf, &buf_size,
+                               poutbuf, poutbuf_size);
+
+        if (ret == AVERROR(EAGAIN))
             return buf_size;
+
+        if (ret == AVERROR(ENOMEM))
+            return ret;
     }
 
     if (s->mpeg_enc_ctx_allocated == 0 && avctx->codec_tag == AV_RL32("VCR2"))
