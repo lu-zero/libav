@@ -250,6 +250,7 @@ Toolchain options:
   --host-libs=HLIBS        use libs HLIBS when linking for host
   --host-os=OS             compiler host OS [$target_os]
   --extra-cflags=ECFLAGS   add ECFLAGS to CFLAGS [$CFLAGS]
+  --extra-objcflags=EOBJCFLAGS   add EOBJCFLAGS to OBJCFLAGS [$OBJCFLAGS]
   --extra-ldflags=ELDFLAGS add ELDFLAGS to LDFLAGS [$LDFLAGS]
   --extra-ldexeflags=ELDFLAGS add ELDFLAGS to LDEXEFLAGS [$LDEXEFLAGS]
   --extra-libs=ELIBS       add ELIBS [$ELIBS]
@@ -677,6 +678,10 @@ add_cppflags(){
 
 add_cflags(){
     append CFLAGS $($cflags_filter "$@")
+}
+
+add_objcflags(){
+    append OBJCFLAGS $($objcflags_filter "$@")
 }
 
 add_asflags(){
@@ -1670,6 +1675,7 @@ CMDLINE_SET="
 
 CMDLINE_APPEND="
     extra_cflags
+    extra_objcflags
     host_cppflags
 "
 
@@ -3077,6 +3083,7 @@ else
 fi
 
 add_cflags $extra_cflags
+add_objcflags $extra_objcflags
 add_asflags $extra_cflags
 
 if test -n "$sysroot"; then
@@ -4688,6 +4695,7 @@ CC_IDENT=$cc_ident
 ARCH=$arch
 INTRINSICS=$intrinsics
 CC=$cc
+OBJCC=$cc
 AS=$as
 LD=$ld
 DEPCC=$dep_cc
@@ -4704,6 +4712,7 @@ STRIP=$strip
 LN_S=$ln_s
 CPPFLAGS=$CPPFLAGS
 CFLAGS=$CFLAGS
+OBJCFLAGS=$CFLAGS $OBJCFLAGS
 ASFLAGS=$ASFLAGS
 AS_C=$AS_C
 AS_O=$AS_O
