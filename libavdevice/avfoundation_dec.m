@@ -78,11 +78,67 @@ static int avfoundation_list_capture_devices(AVFormatContext *s)
     return AVERROR_EXIT;
 }
 
+const NSString *pat = @"(\\[[^\\]]+\\])";
+
+static int setup_stream(AVFormatContext *s, NSString *uniqueID)
+{
+    // add the input devices
+
+    // add the output devices
+
+    return 0;
+}
+
+static int setup_streams(AVFormatContext *s)
+{
+    int i, ret;
+    NSError *error = nil;
+    NSArray *matches;
+    NSString *parse_string;
+    NSRegularExpression *exp;
+
+    if (s->filename[0] != '[')
+        return AVERROR(EINVAL);
+
+    exp = [NSRegularExpression regularExpressionWithPattern:pat
+                                                    options:0
+                                                      error:&error];
+    if (!exp) {
+        av_log(s, AV_LOG_ERROR, "%s\n",
+               [[error localizedDescription] UTF8String]);
+        return AVERROR(ENOMEM);
+    }
+
+    parse_string = [NSString stringWithFormat:@"%s", s->filename];
+
+    matches = [exp matchesInString:parse_string options:0
+                             range:NSMakeRange(0, [test length])];
+
+    if (matches) {
+        // alloc the capture
+
+    }
+
+    for (NSTextCheckingResult *match in matches) {
+        NSRange range = [match rangeAtIndex:1];
+        NSLog(@"match 1: %@", [parse_string substringWithRange:range]);
+        ret = setup_stream(s, [parse_string substringWithRange:range]);
+        if (ret < 0) {
+            // avfoundation_close
+            return ret;
+        }
+    }
+
+    return 0;
+}
 
 
 static int avfoundation_read_header(AVFormatContext *s)
 {
-    return avfoundation_list_capture_devices(s);
+    if (ctx->list_devices)
+        return avfoundation_list_capture_devices(s);
+
+    return setup_streams(s);
 }
 
 static const AVClass avfoundation_class = {
