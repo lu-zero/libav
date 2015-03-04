@@ -31,6 +31,7 @@
 typedef struct AVFoundationCaptureContext {
     AVClass *class;
     int list_devices;
+    CFTypeRef session;
 } AVFoundationCaptureContext;
 
 #define AUDIO_DEVICES 1
@@ -78,27 +79,66 @@ static int avfoundation_list_capture_devices(AVFormatContext *s)
     return AVERROR_EXIT;
 }
 
-const NSString *pat = @"(\\[[^\\]]+\\])";
+NSString *pat = @"(\\[[^\\]]+\\])";
 
-static int setup_stream(AVFormatContext *s, NSString *uniqueID)
+static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
 {
+    AVFoundationCaptureContext *ctx = s->priv_data;
+    NSError *__autoreleasing error = nil;
+    AVCaptureDeviceInput *input;
+    AVCaptureSession *session = (__bridge AVCaptureSession*)ctx->session;
+    input = [AVCaptureDeviceInput deviceInputWithDevice:device
+                                                  error:&error];
     // add the input devices
+    if (!input) {
+        av_log(s, AV_LOG_ERROR, "%s\n",
+               [[error localizedDescription] UTF8String]);
+        return AVERROR_UNKNOWN;
+    }
+
+    [session addInput:input];
 
     // add the output devices
+    if ([device hasMediaType:AVMediaTypeVideo]) {
+        AVCaptureVideoDataOutput *out =
+            [[AVCaptureVideoDataOutput alloc] init];
+
+        out.videoSettings = nil;
+        [session addOutput:out];
+
+        NSLog(@"%@ %@", device, out.videoSettings);
+    }
+    if ([device hasMediaType:AVMediaTypeAudio]) {
+        AVCaptureAudioDataOutput *out =
+            [[AVCaptureAudioDataOutput alloc] init];
+
+        out.audioSettings = nil;
+        [session addOutput:out];
+
+        NSLog(@"%@ %@", device, out.audioSettings);
+    }
 
     return 0;
 }
 
 static int setup_streams(AVFormatContext *s)
 {
-    int i, ret;
-    NSError *error = nil;
+    AVFoundationCaptureContext *ctx = s->priv_data;
+    int ret;
+    NSError *__autoreleasing error = nil;
     NSArray *matches;
-    NSString *parse_string;
+    NSString *filename;
+    AVCaptureDevice *device;
     NSRegularExpression *exp;
 
-    if (s->filename[0] != '[')
-        return AVERROR(EINVAL);
+    if (s->filename[0] != '[') {
+        for (NSString *type in @[AVMediaTypeAudio, AVMediaTypeVideo]) {
+            device = [AVCaptureDevice defaultDeviceWithMediaType:type];
+            if (device)
+                setup_stream(s, device);
+        }
+        return AVERROR_EXIT;
+    }
 
     exp = [NSRegularExpression regularExpressionWithPattern:pat
                                                     options:0
@@ -109,32 +149,38 @@ static int setup_streams(AVFormatContext *s)
         return AVERROR(ENOMEM);
     }
 
-    parse_string = [NSString stringWithFormat:@"%s", s->filename];
+    filename = [NSString stringWithFormat:@"%s", s->filename];
 
-    matches = [exp matchesInString:parse_string options:0
-                             range:NSMakeRange(0, [test length])];
+    matches = [exp matchesInString:filename options:0
+                             range:NSMakeRange(0, [filename length])];
+
+    ctx->session = (__bridge_retained CFTypeRef)[[AVCaptureSession alloc] init];
 
     if (matches) {
-        // alloc the capture
-
-    }
-
-    for (NSTextCheckingResult *match in matches) {
-        NSRange range = [match rangeAtIndex:1];
-        NSLog(@"match 1: %@", [parse_string substringWithRange:range]);
-        ret = setup_stream(s, [parse_string substringWithRange:range]);
-        if (ret < 0) {
-            // avfoundation_close
-            return ret;
+        for (NSTextCheckingResult *match in matches) {
+            NSRange range = [match rangeAtIndex:1];
+            NSString *uniqueID = [filename substringWithRange:range];
+            if (!(device = [AVCaptureDevice deviceWithUniqueID:uniqueID])) {
+                // report error
+                return AVERROR(EINVAL);
+            }
+            ret = setup_stream(s, device);
+            if (ret < 0) {
+                // avfoundation_close
+                return ret;
+            }
         }
+    } else {
+        return AVERROR(EINVAL);
     }
 
-    return 0;
+    return AVERROR_EXIT; //
 }
 
 
 static int avfoundation_read_header(AVFormatContext *s)
 {
+    AVFoundationCaptureContext *ctx = s->priv_data;
     if (ctx->list_devices)
         return avfoundation_list_capture_devices(s);
 
