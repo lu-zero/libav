@@ -1,6 +1,7 @@
 /*
  * AVFoundation input device
  * Copyright (c) 2015 Luca Barbato
+ *                    Alexandre Lision
  *
  * This file is part of Libav.
  *
@@ -20,6 +21,8 @@
  */
 
 #import <AVFoundation/AVFoundation.h>
+//#import <CoreVideo/CoreVideo.h>
+#include <pthread.h>
 
 #include "libavformat/avformat.h"
 #include "libavutil/log.h"
@@ -27,11 +30,25 @@
 
 #include "avdevice.h"
 
-
 typedef struct AVFoundationCaptureContext {
-    AVClass *class;
-    int list_devices;
-    CFTypeRef session;
+    AVClass         *class;
+    int             list_devices;
+    CFTypeRef       session;        /** AVCaptureSession*/
+    char*           video_size;     /**< String describing video size,
+                                        set by a private option. */
+    char*           pixel_format;   /**< Set by a private option. */
+    int             list_format;    /**< Set by a private option. */
+    char*           framerate;      /**< Set by a private option. */
+
+    int             frames_captured;
+    int             audio_frames_captured;
+    pthread_mutex_t frame_lock;
+    pthread_cond_t  frame_wait_cond;
+
+    CFTypeRef       avf_delegate;
+    CFTypeRef       video_output;
+    CFTypeRef       current_frame;
+
 } AVFoundationCaptureContext;
 
 #define AUDIO_DEVICES 1
@@ -79,10 +96,68 @@ static int avfoundation_list_capture_devices(AVFormatContext *s)
     return AVERROR_EXIT;
 }
 
+static void lock_frames(AVFoundationCaptureContext* ctx)
+{
+    pthread_mutex_lock(&ctx->frame_lock);
+}
+
+static void unlock_frames(AVFoundationCaptureContext* ctx)
+{
+    pthread_mutex_unlock(&ctx->frame_lock);
+}
+
+/** FrameReceiver class - delegate for AVCaptureSession
+ */
+@interface AVFFrameReceiver : NSObject
+{
+    AVFoundationCaptureContext* _context;
+}
+
+- (id)initWithContext:(AVFoundationCaptureContext*)context;
+
+- (void)  captureOutput:(AVCaptureOutput *)captureOutput
+  didOutputSampleBuffer:(CMSampleBufferRef)videoFrame
+         fromConnection:(AVCaptureConnection *)connection;
+
+@end
+
+@implementation AVFFrameReceiver
+
+- (id)initWithContext:(AVFoundationCaptureContext*)context
+{
+    if (self = [super init]) {
+        _context = context;
+    }
+    return self;
+}
+
+- (void)  captureOutput:(AVCaptureOutput *)captureOutput
+  didOutputSampleBuffer:(CMSampleBufferRef)videoFrame
+         fromConnection:(AVCaptureConnection *)connection
+{
+    lock_frames(_context);
+
+    if (_context->current_frame != nil) {
+        CFRelease(_context->current_frame);
+    }
+
+    _context->current_frame = (CMSampleBufferRef)CFRetain(videoFrame);
+
+    pthread_cond_signal(&_context->frame_wait_cond);
+
+    unlock_frames(_context);
+
+    ++_context->frames_captured;
+}
+
+@end
+
 NSString *pat = @"(\\[[^\\]]+\\])";
 
 static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
 {
+    NSLog(@"setting up stream for device");
+    AVStream *st;
     AVFoundationCaptureContext *ctx = s->priv_data;
     NSError *__autoreleasing error = nil;
     AVCaptureDeviceInput *input;
@@ -96,19 +171,43 @@ static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
         return AVERROR_UNKNOWN;
     }
 
-    [session addInput:input];
+    if ([session canAddInput:input]) {
+        [session addInput:input];
+    } else {
+        av_log(s, AV_LOG_ERROR, "can't add video input to capture session\n");
+        return 1;
+    }
 
     // add the output devices
     if ([device hasMediaType:AVMediaTypeVideo]) {
-        AVCaptureVideoDataOutput *out =
-            [[AVCaptureVideoDataOutput alloc] init];
 
-        out.videoSettings = nil;
-        [session addOutput:out];
+        AVCaptureVideoDataOutput* out = [[AVCaptureVideoDataOutput alloc] init];
+        if (!out) {
+            av_log(s, AV_LOG_ERROR, "Failed to init AV video output\n");
+            return 1;
+        }
 
-        NSLog(@"%@ %@", device, out.videoSettings);
+        [out setAlwaysDiscardsLateVideoFrames:YES];
+        //[out setVideoSettings:nil];
+
+        AVFFrameReceiver* delegate = [[AVFFrameReceiver alloc] initWithContext:ctx];
+
+        dispatch_queue_t queue = dispatch_queue_create("avf_queue", NULL);
+        [out setSampleBufferDelegate:delegate queue:queue];
+
+        ctx->avf_delegate = (__bridge_retained CFTypeRef) delegate;
+
+        if ([session canAddOutput:out]) {
+            [session addOutput:out];
+            ctx->video_output = (__bridge_retained CFTypeRef) out;
+        } else {
+            av_log(s, AV_LOG_ERROR, "can't add video output to capture session\n");
+            return 1;
+        }
+        NSLog(@"%@", device);
     }
-    if ([device hasMediaType:AVMediaTypeAudio]) {
+
+/**    if ([device hasMediaType:AVMediaTypeAudio]) {
         AVCaptureAudioDataOutput *out =
             [[AVCaptureAudioDataOutput alloc] init];
 
@@ -117,7 +216,7 @@ static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
 
         NSLog(@"%@ %@", device, out.audioSettings);
     }
-
+*/
     return 0;
 }
 
@@ -130,6 +229,10 @@ static int setup_streams(AVFormatContext *s)
     NSString *filename;
     AVCaptureDevice *device;
     NSRegularExpression *exp;
+    AVCaptureSession *session = (__bridge AVCaptureSession*)ctx->session;
+
+    pthread_mutex_init(&ctx->frame_lock, NULL);
+    pthread_cond_init(&ctx->frame_wait_cond, NULL);
 
     if (s->filename[0] != '[') {
         for (NSString *type in @[AVMediaTypeAudio, AVMediaTypeVideo]) {
@@ -174,7 +277,24 @@ static int setup_streams(AVFormatContext *s)
         return AVERROR(EINVAL);
     }
 
-    return AVERROR_EXIT; //
+    [session startRunning];
+    return 0;
+}
+
+static void destroy_context(AVFoundationCaptureContext* ctx)
+{
+    AVCaptureSession *session = (__bridge AVCaptureSession*)ctx->session;
+    [session stopRunning];
+
+    ctx->session = NULL;
+
+
+    pthread_mutex_destroy(&ctx->frame_lock);
+    pthread_cond_destroy(&ctx->frame_wait_cond);
+
+    if (ctx->current_frame) {
+        CFRelease(ctx->current_frame);
+    }
 }
 
 
@@ -185,6 +305,18 @@ static int avfoundation_read_header(AVFormatContext *s)
         return avfoundation_list_capture_devices(s);
 
     return setup_streams(s);
+}
+
+static int avfoundation_read_packet(AVFormatContext *s1, AVPacket *pkt)
+{
+    return 0;
+}
+
+static int avfoundation_read_close(AVFormatContext *s)
+{
+    AVFoundationCaptureContext *ctx = s->priv_data;
+    destroy_context(ctx);
+    return 0;
 }
 
 static const AVClass avfoundation_class = {
@@ -199,8 +331,8 @@ AVInputFormat ff_avfoundation_demuxer = {
     .long_name      = NULL_IF_CONFIG_SMALL("AVFoundation AVCaptureDevice grab"),
     .priv_data_size = sizeof(AVFoundationCaptureContext),
     .read_header    = avfoundation_read_header,
-//    .read_packet    = avfoundation_read_packet,
-//    .read_close     = avfoundation_read_close,
+    .read_packet    = avfoundation_read_packet,
+    .read_close     = avfoundation_read_close,
     .flags          = AVFMT_NOFILE,
     .priv_class     = &avfoundation_class,
 };
