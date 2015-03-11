@@ -21,12 +21,14 @@
  */
 
 #import <AVFoundation/AVFoundation.h>
-//#import <CoreVideo/CoreVideo.h>
+#import <CoreVideo/CoreVideo.h>
 #include <pthread.h>
 
 #include "libavformat/avformat.h"
 #include "libavutil/log.h"
 #include "libavutil/opt.h"
+#include "libavutil/pixdesc.h"
+#include "libavformat/internal.h"
 
 #include "avdevice.h"
 
@@ -40,14 +42,16 @@ typedef struct AVFoundationCaptureContext {
     int             list_format;    /**< Set by a private option. */
     char*           framerate;      /**< Set by a private option. */
 
+    int             video_stream_index;
+
     int             frames_captured;
     int             audio_frames_captured;
     pthread_mutex_t frame_lock;
     pthread_cond_t  frame_wait_cond;
 
-    CFTypeRef       avf_delegate;
-    CFTypeRef       video_output;
-    CFTypeRef       current_frame;
+    CFTypeRef           avf_delegate;   /** AVFFrameReceiver */
+    CFTypeRef           video_output;   /** AVCaptureVideoDataOutput */
+    CVImageBufferRef    current_frame;  /** CMSampleBufferRef */
 
 } AVFoundationCaptureContext;
 
@@ -108,7 +112,7 @@ static void unlock_frames(AVFoundationCaptureContext* ctx)
 
 /** FrameReceiver class - delegate for AVCaptureSession
  */
-@interface AVFFrameReceiver : NSObject
+@interface AVFFrameReceiver : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     AVFoundationCaptureContext* _context;
 }
@@ -141,7 +145,7 @@ static void unlock_frames(AVFoundationCaptureContext* ctx)
         CFRelease(_context->current_frame);
     }
 
-    _context->current_frame = (CMSampleBufferRef)CFRetain(videoFrame);
+    _context->current_frame = CMSampleBufferGetImageBuffer(videoFrame);
 
     pthread_cond_signal(&_context->frame_wait_cond);
 
@@ -220,6 +224,61 @@ static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
     return 0;
 }
 
+static int get_video_config(AVFormatContext *s)
+{
+    AVFoundationCaptureContext *ctx = (AVFoundationCaptureContext*)s->priv_data;
+    CVImageBufferRef image_buffer;
+    CGSize image_buffer_size;
+    AVStream* stream = avformat_new_stream(s, NULL);
+
+    if (!stream) {
+        return 1;
+    }
+
+    // Take stream info from the first frame.
+    while (ctx->frames_captured < 1) {
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.1, YES);
+    }
+
+    lock_frames(ctx);
+
+    ctx->video_stream_index = stream->index;
+
+    avpriv_set_pts_info(stream, 64, 1, 1000000);
+
+    image_buffer = ctx->current_frame;
+    image_buffer_size = CVImageBufferGetEncodedSize(image_buffer);
+
+    stream->codec->codec_id   = AV_CODEC_ID_RAWVIDEO;
+    stream->codec->codec_type = AVMEDIA_TYPE_VIDEO;
+    stream->codec->width      = (int)image_buffer_size.width;
+    stream->codec->height     = (int)image_buffer_size.height;
+    stream->codec->pix_fmt    = AV_PIX_FMT_YUV420P;
+
+    CFRelease(ctx->current_frame);
+    ctx->current_frame = nil;
+
+    unlock_frames(ctx);
+
+    return 0;
+}
+
+static void destroy_context(AVFoundationCaptureContext* ctx)
+{
+    AVCaptureSession *session = (__bridge AVCaptureSession*)ctx->session;
+    [session stopRunning];
+
+    ctx->session = NULL;
+
+
+    pthread_mutex_destroy(&ctx->frame_lock);
+    pthread_cond_destroy(&ctx->frame_wait_cond);
+
+    if (ctx->current_frame) {
+        CFRelease(ctx->current_frame);
+    }
+}
+
 static int setup_streams(AVFormatContext *s)
 {
     AVFoundationCaptureContext *ctx = s->priv_data;
@@ -278,24 +337,16 @@ static int setup_streams(AVFormatContext *s)
     }
 
     [session startRunning];
+
+    if (get_video_config(s)) {
+        destroy_context(ctx);
+        return AVERROR(EIO);
+    }
+
     return 0;
 }
 
-static void destroy_context(AVFoundationCaptureContext* ctx)
-{
-    AVCaptureSession *session = (__bridge AVCaptureSession*)ctx->session;
-    [session stopRunning];
 
-    ctx->session = NULL;
-
-
-    pthread_mutex_destroy(&ctx->frame_lock);
-    pthread_cond_destroy(&ctx->frame_wait_cond);
-
-    if (ctx->current_frame) {
-        CFRelease(ctx->current_frame);
-    }
-}
 
 
 static int avfoundation_read_header(AVFormatContext *s)
