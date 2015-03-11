@@ -21,7 +21,6 @@
  */
 
 #import <AVFoundation/AVFoundation.h>
-#import <CoreVideo/CoreVideo.h>
 #include <pthread.h>
 
 #include "libavformat/avformat.h"
@@ -29,6 +28,8 @@
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
 #include "libavformat/internal.h"
+#include "libavutil/time.h"
+#include "libavutil/mathematics.h"
 
 #include "avdevice.h"
 
@@ -44,6 +45,7 @@ typedef struct AVFoundationCaptureContext {
 
     int             video_stream_index;
 
+    int64_t         first_pts;
     int             frames_captured;
     int             audio_frames_captured;
     pthread_mutex_t frame_lock;
@@ -51,7 +53,7 @@ typedef struct AVFoundationCaptureContext {
 
     CFTypeRef           avf_delegate;   /** AVFFrameReceiver */
     CFTypeRef           video_output;   /** AVCaptureVideoDataOutput */
-    CVImageBufferRef    current_frame;  /** CMSampleBufferRef */
+    CVImageBufferRef    current_frame;  /** CVImageBufferRef */
 
 } AVFoundationCaptureContext;
 
@@ -347,19 +349,50 @@ static int setup_streams(AVFormatContext *s)
 }
 
 
-
-
 static int avfoundation_read_header(AVFormatContext *s)
 {
     AVFoundationCaptureContext *ctx = s->priv_data;
+    ctx->first_pts = av_gettime();
     if (ctx->list_devices)
         return avfoundation_list_capture_devices(s);
 
     return setup_streams(s);
 }
 
-static int avfoundation_read_packet(AVFormatContext *s1, AVPacket *pkt)
+static int avfoundation_read_packet(AVFormatContext *s, AVPacket *pkt)
 {
+    AVFoundationCaptureContext* ctx = (AVFoundationCaptureContext*)s->priv_data;
+
+    do {
+        lock_frames(ctx);
+
+        if (ctx->current_frame != nil) {
+            if (av_new_packet(pkt, (int)CVPixelBufferGetDataSize(ctx->current_frame)) < 0) {
+                return AVERROR(EIO);
+            }
+
+            pkt->pts = pkt->dts = av_rescale_q(av_gettime() - ctx->first_pts,
+                                               AV_TIME_BASE_Q,
+                                               (AVRational){1, 1000000});
+            pkt->stream_index  = ctx->video_stream_index;
+            pkt->flags        |= AV_PKT_FLAG_KEY;
+
+            CVPixelBufferLockBaseAddress(ctx->current_frame, 0);
+
+            void* data = CVPixelBufferGetBaseAddress(ctx->current_frame);
+            memcpy(pkt->data, data, pkt->size);
+
+            CVPixelBufferUnlockBaseAddress(ctx->current_frame, 0);
+            CFRelease(ctx->current_frame);
+            ctx->current_frame = nil;
+        } else {
+            pkt->data = NULL;
+            pthread_cond_wait(&ctx->frame_wait_cond, &ctx->frame_lock);
+        }
+
+        unlock_frames(ctx);
+    } while (!pkt->data);
+
     return 0;
 }
 
