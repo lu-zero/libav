@@ -146,8 +146,9 @@ static void unlock_frames(AVFoundationCaptureContext* ctx)
     if (_context->current_frame != nil) {
         CFRelease(_context->current_frame);
     }
+    NSLog(@"Received frame from camera");
 
-    _context->current_frame = CMSampleBufferGetImageBuffer(videoFrame);
+    _context->current_frame = CFRetain(CMSampleBufferGetImageBuffer(videoFrame));
 
     pthread_cond_signal(&_context->frame_wait_cond);
 
@@ -162,8 +163,8 @@ NSString *pat = @"(\\[[^\\]]+\\])";
 
 static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
 {
-    NSLog(@"setting up stream for device");
-    AVStream *st;
+    NSLog(@"setting up stream for device %@ ID\n", [device uniqueID]);
+
     AVFoundationCaptureContext *ctx = s->priv_data;
     NSError *__autoreleasing error = nil;
     AVCaptureDeviceInput *input;
@@ -234,6 +235,7 @@ static int get_video_config(AVFormatContext *s)
     AVStream* stream = avformat_new_stream(s, NULL);
 
     if (!stream) {
+        av_log(s, AV_LOG_ERROR, "Failed to create AVStream\n");
         return 1;
     }
 
@@ -251,10 +253,12 @@ static int get_video_config(AVFormatContext *s)
     image_buffer = ctx->current_frame;
     image_buffer_size = CVImageBufferGetEncodedSize(image_buffer);
 
+    av_log(s, AV_LOG_ERROR, "Update stream info...\n");
     stream->codec->codec_id   = AV_CODEC_ID_RAWVIDEO;
     stream->codec->codec_type = AVMEDIA_TYPE_VIDEO;
     stream->codec->width      = (int)image_buffer_size.width;
     stream->codec->height     = (int)image_buffer_size.height;
+    // No support for pixel formats for now using default one
     stream->codec->pix_fmt    = AV_PIX_FMT_YUV420P;
 
     CFRelease(ctx->current_frame);
@@ -267,6 +271,8 @@ static int get_video_config(AVFormatContext *s)
 
 static void destroy_context(AVFoundationCaptureContext* ctx)
 {
+    NSLog(@"Destroying context");
+
     AVCaptureSession *session = (__bridge AVCaptureSession*)ctx->session;
     [session stopRunning];
 
@@ -283,6 +289,7 @@ static void destroy_context(AVFoundationCaptureContext* ctx)
 
 static int setup_streams(AVFormatContext *s)
 {
+    NSLog(@"setting streams");
     AVFoundationCaptureContext *ctx = s->priv_data;
     int ret;
     NSError *__autoreleasing error = nil;
@@ -290,56 +297,61 @@ static int setup_streams(AVFormatContext *s)
     NSString *filename;
     AVCaptureDevice *device;
     NSRegularExpression *exp;
-    AVCaptureSession *session = (__bridge AVCaptureSession*)ctx->session;
 
     pthread_mutex_init(&ctx->frame_lock, NULL);
     pthread_cond_init(&ctx->frame_wait_cond, NULL);
 
+    ctx->session = (__bridge_retained CFTypeRef)[[AVCaptureSession alloc] init];
+
     if (s->filename[0] != '[') {
-        for (NSString *type in @[AVMediaTypeAudio, AVMediaTypeVideo]) {
+        for (NSString *type in @[AVMediaTypeVideo]) {
             device = [AVCaptureDevice defaultDeviceWithMediaType:type];
             if (device)
                 setup_stream(s, device);
         }
-        return AVERROR_EXIT;
-    }
-
-    exp = [NSRegularExpression regularExpressionWithPattern:pat
-                                                    options:0
-                                                      error:&error];
-    if (!exp) {
-        av_log(s, AV_LOG_ERROR, "%s\n",
-               [[error localizedDescription] UTF8String]);
-        return AVERROR(ENOMEM);
-    }
-
-    filename = [NSString stringWithFormat:@"%s", s->filename];
-
-    matches = [exp matchesInString:filename options:0
-                             range:NSMakeRange(0, [filename length])];
-
-    ctx->session = (__bridge_retained CFTypeRef)[[AVCaptureSession alloc] init];
-
-    if (matches) {
-        for (NSTextCheckingResult *match in matches) {
-            NSRange range = [match rangeAtIndex:1];
-            NSString *uniqueID = [filename substringWithRange:range];
-            if (!(device = [AVCaptureDevice deviceWithUniqueID:uniqueID])) {
-                // report error
-                return AVERROR(EINVAL);
-            }
-            ret = setup_stream(s, device);
-            if (ret < 0) {
-                // avfoundation_close
-                return ret;
-            }
-        }
     } else {
-        return AVERROR(EINVAL);
+        exp = [NSRegularExpression regularExpressionWithPattern:pat
+                                                        options:0
+                                                          error:&error];
+        if (!exp) {
+            av_log(s, AV_LOG_ERROR, "%s\n",
+                   [[error localizedDescription] UTF8String]);
+            return AVERROR(ENOMEM);
+        }
+
+        filename = [NSString stringWithFormat:@"%s", s->filename];
+        av_log(s, AV_LOG_INFO, "device name: %s\n",[filename UTF8String]);
+
+        matches = [exp matchesInString:filename options:0
+                                 range:NSMakeRange(0, [filename length])];
+
+        if (matches) {
+            for (NSTextCheckingResult *match in matches) {
+                NSRange range = [match rangeAtIndex:1];
+                NSString *uniqueID = [filename substringWithRange:range];
+                av_log(s, AV_LOG_INFO, "opening devide with ID: %s\n",[uniqueID UTF8String]);
+                if (!(device = [AVCaptureDevice deviceWithUniqueID:uniqueID])) {
+                    // report error
+                    av_log(s, AV_LOG_ERROR, "Device with name %s not found",[filename UTF8String]);
+                    return AVERROR(EINVAL);
+                }
+                ret = setup_stream(s, device);
+                if (ret < 0) {
+                    // avfoundation_close
+                    return ret;
+                }
+            }
+        } else {
+            return AVERROR(EINVAL);
+        }
     }
 
-    [session startRunning];
 
+
+    av_log(s, AV_LOG_INFO, "Starting session!\n");
+    [(__bridge AVCaptureSession*)ctx->session startRunning];
+
+    av_log(s, AV_LOG_INFO, "Checking video config\n");
     if (get_video_config(s)) {
         destroy_context(ctx);
         return AVERROR(EIO);
@@ -398,6 +410,7 @@ static int avfoundation_read_packet(AVFormatContext *s, AVPacket *pkt)
 
 static int avfoundation_read_close(AVFormatContext *s)
 {
+    NSLog(@"Closing session...");
     AVFoundationCaptureContext *ctx = s->priv_data;
     destroy_context(ctx);
     return 0;
