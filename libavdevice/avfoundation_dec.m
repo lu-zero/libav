@@ -146,7 +146,6 @@ static void unlock_frames(AVFoundationCaptureContext* ctx)
     if (_context->current_frame != nil) {
         CFRelease(_context->current_frame);
     }
-    NSLog(@"Received frame from camera");
 
     _context->current_frame = CFRetain(CMSampleBufferGetImageBuffer(videoFrame));
 
@@ -159,7 +158,7 @@ static void unlock_frames(AVFoundationCaptureContext* ctx)
 
 @end
 
-NSString *pat = @"(\\[[^\\]]+\\])";
+NSString *pat = @"(\b[A-Z0-9]+\b)";
 
 static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
 {
@@ -182,7 +181,7 @@ static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
         [session addInput:input];
     } else {
         av_log(s, AV_LOG_ERROR, "can't add video input to capture session\n");
-        return 1;
+        return -1;
     }
 
     // add the output devices
@@ -191,10 +190,12 @@ static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
         AVCaptureVideoDataOutput* out = [[AVCaptureVideoDataOutput alloc] init];
         if (!out) {
             av_log(s, AV_LOG_ERROR, "Failed to init AV video output\n");
-            return 1;
+            return -1;
         }
 
         [out setAlwaysDiscardsLateVideoFrames:YES];
+        out.videoSettings = @{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+
         //[out setVideoSettings:nil];
 
         AVFFrameReceiver* delegate = [[AVFFrameReceiver alloc] initWithContext:ctx];
@@ -209,7 +210,7 @@ static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
             ctx->video_output = (__bridge_retained CFTypeRef) out;
         } else {
             av_log(s, AV_LOG_ERROR, "can't add video output to capture session\n");
-            return 1;
+            return -1;
         }
         NSLog(@"%@", device);
     }
@@ -236,7 +237,7 @@ static int get_video_config(AVFormatContext *s)
 
     if (!stream) {
         av_log(s, AV_LOG_ERROR, "Failed to create AVStream\n");
-        return 1;
+        return -1;
     }
 
     // Take stream info from the first frame.
@@ -259,7 +260,7 @@ static int get_video_config(AVFormatContext *s)
     stream->codec->width      = (int)image_buffer_size.width;
     stream->codec->height     = (int)image_buffer_size.height;
     // No support for pixel formats for now using default one
-    stream->codec->pix_fmt    = AV_PIX_FMT_YUV420P;
+    stream->codec->pix_fmt    = AV_PIX_FMT_BGR32;
 
     CFRelease(ctx->current_frame);
     ctx->current_frame = nil;
@@ -287,6 +288,18 @@ static void destroy_context(AVFoundationCaptureContext* ctx)
     }
 }
 
+static int setup_default_stream(AVFormatContext *s)
+{
+    AVCaptureDevice *device;
+    for (NSString *type in @[AVMediaTypeVideo]) {
+        device = [AVCaptureDevice defaultDeviceWithMediaType:type];
+        if (device)
+            return setup_stream(s, device);
+    }
+
+    return -1;
+}
+
 static int setup_streams(AVFormatContext *s)
 {
     NSLog(@"setting streams");
@@ -304,11 +317,7 @@ static int setup_streams(AVFormatContext *s)
     ctx->session = (__bridge_retained CFTypeRef)[[AVCaptureSession alloc] init];
 
     if (s->filename[0] != '[') {
-        for (NSString *type in @[AVMediaTypeVideo]) {
-            device = [AVCaptureDevice defaultDeviceWithMediaType:type];
-            if (device)
-                setup_stream(s, device);
-        }
+        ret = setup_default_stream(s);
     } else {
         exp = [NSRegularExpression regularExpressionWithPattern:pat
                                                         options:0
@@ -325,11 +334,11 @@ static int setup_streams(AVFormatContext *s)
         matches = [exp matchesInString:filename options:0
                                  range:NSMakeRange(0, [filename length])];
 
-        if (matches) {
+        if (matches.count > 0) {
             for (NSTextCheckingResult *match in matches) {
-                NSRange range = [match rangeAtIndex:1];
+                NSRange range = [match rangeAtIndex:0];
                 NSString *uniqueID = [filename substringWithRange:range];
-                av_log(s, AV_LOG_INFO, "opening devide with ID: %s\n",[uniqueID UTF8String]);
+                av_log(s, AV_LOG_INFO, "opening device with ID: %s\n",[uniqueID UTF8String]);
                 if (!(device = [AVCaptureDevice deviceWithUniqueID:uniqueID])) {
                     // report error
                     av_log(s, AV_LOG_ERROR, "Device with name %s not found",[filename UTF8String]);
@@ -342,11 +351,15 @@ static int setup_streams(AVFormatContext *s)
                 }
             }
         } else {
-            return AVERROR(EINVAL);
+            av_log(s, AV_LOG_ERROR, "No matches for %s",[filename UTF8String]);
+            ret = setup_default_stream(s);
         }
     }
 
-
+    if (ret < 0) {
+        av_log(s, AV_LOG_ERROR, "No device could be added");
+        return ret;
+    }
 
     av_log(s, AV_LOG_INFO, "Starting session!\n");
     [(__bridge AVCaptureSession*)ctx->session startRunning];
