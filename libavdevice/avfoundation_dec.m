@@ -33,13 +33,47 @@
 
 #include "avdevice.h"
 
+struct AVFPixelFormatSpec {
+    enum AVPixelFormat ff_id;
+    OSType avf_id;
+};
+
+static const struct AVFPixelFormatSpec avf_pixel_formats[] = {
+    { AV_PIX_FMT_MONOBLACK,    kCVPixelFormatType_1Monochrome },
+    { AV_PIX_FMT_RGB555BE,     kCVPixelFormatType_16BE555 },
+    { AV_PIX_FMT_RGB555LE,     kCVPixelFormatType_16LE555 },
+    { AV_PIX_FMT_RGB565BE,     kCVPixelFormatType_16BE565 },
+    { AV_PIX_FMT_RGB565LE,     kCVPixelFormatType_16LE565 },
+    { AV_PIX_FMT_RGB24,        kCVPixelFormatType_24RGB },
+    { AV_PIX_FMT_BGR24,        kCVPixelFormatType_24BGR },
+    { AV_PIX_FMT_ARGB,         kCVPixelFormatType_32ARGB },
+    { AV_PIX_FMT_BGRA,         kCVPixelFormatType_32BGRA },
+    { AV_PIX_FMT_ABGR,         kCVPixelFormatType_32ABGR },
+    { AV_PIX_FMT_RGBA,         kCVPixelFormatType_32RGBA },
+    { AV_PIX_FMT_BGR48BE,      kCVPixelFormatType_48RGB },
+    { AV_PIX_FMT_UYVY422,      kCVPixelFormatType_422YpCbCr8 },
+    { AV_PIX_FMT_YUVA444P,     kCVPixelFormatType_4444YpCbCrA8R },
+    { AV_PIX_FMT_YUVA444P16LE, kCVPixelFormatType_4444AYpCbCr16 },
+    { AV_PIX_FMT_YUV444P,      kCVPixelFormatType_444YpCbCr8 },
+    { AV_PIX_FMT_YUV422P16,    kCVPixelFormatType_422YpCbCr16 },
+    { AV_PIX_FMT_YUV422P10,    kCVPixelFormatType_422YpCbCr10 },
+    { AV_PIX_FMT_YUV444P10,    kCVPixelFormatType_444YpCbCr10 },
+    { AV_PIX_FMT_YUV420P,      kCVPixelFormatType_420YpCbCr8Planar },
+    { AV_PIX_FMT_NV12,         kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange },
+    { AV_PIX_FMT_YUYV422,      kCVPixelFormatType_422YpCbCr8_yuvs },
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+    { AV_PIX_FMT_GRAY8,        kCVPixelFormatType_OneComponent8 },
+#endif
+    { AV_PIX_FMT_NONE, 0 }
+};
+
 typedef struct AVFoundationCaptureContext {
     AVClass         *class;
     int             list_devices;
     CFTypeRef       session;        /** AVCaptureSession*/
     char*           video_size;     /**< String describing video size,
                                         set by a private option. */
-    char*           pixel_format;   /**< Set by a private option. */
+    enum AVPixelFormat pixel_format;   /**< Set by a private option. */
     int             list_format;    /**< Set by a private option. */
     char*           framerate;      /**< Set by a private option. */
 
@@ -158,7 +192,7 @@ static void unlock_frames(AVFoundationCaptureContext* ctx)
 
 @end
 
-NSString *pat = @"(\b[A-Z0-9]+\b)";
+NSString *pat = @"\\[[^\\].]*\\]";
 
 static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
 {
@@ -194,9 +228,46 @@ static int setup_stream(AVFormatContext *s, AVCaptureDevice *device)
         }
 
         [out setAlwaysDiscardsLateVideoFrames:YES];
-        out.videoSettings = @{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
 
-        //[out setVideoSettings:nil];
+
+        // select pixel format
+        struct AVFPixelFormatSpec pxl_fmt_spec;
+        pxl_fmt_spec.ff_id = AV_PIX_FMT_NONE;
+
+        av_log(s, AV_LOG_ERROR, "Supported pixel formats:\n");
+        for (NSNumber *pxl_fmt in [out availableVideoCVPixelFormatTypes]) {
+            struct AVFPixelFormatSpec pxl_fmt_dummy;
+            pxl_fmt_dummy.ff_id = AV_PIX_FMT_NONE;
+            for (int i = 0; avf_pixel_formats[i].ff_id != AV_PIX_FMT_NONE; i++) {
+                if ([pxl_fmt intValue] == avf_pixel_formats[i].avf_id) {
+                    pxl_fmt_dummy = avf_pixel_formats[i];
+                    break;
+                }
+            }
+
+            if (pxl_fmt_dummy.ff_id != AV_PIX_FMT_NONE) {
+                av_log(s, AV_LOG_ERROR, "  %s: %d \n", av_get_pix_fmt_name(pxl_fmt_dummy.ff_id),
+                                                    pxl_fmt_dummy.avf_id);
+
+                // select first supported pixel format instead of user selected (or default) pixel format
+                if (pxl_fmt_spec.ff_id == AV_PIX_FMT_NONE) {
+                    pxl_fmt_spec = pxl_fmt_dummy;
+                }
+            }
+        }
+
+        // fail if there is no appropriate pixel format or print a warning about overriding the pixel format
+        if (pxl_fmt_spec.ff_id == AV_PIX_FMT_NONE) {
+            return 1;
+        } else {
+            av_log(s, AV_LOG_WARNING, "Overriding selected pixel format to use %s instead.\n",
+                   av_get_pix_fmt_name(pxl_fmt_spec.ff_id));
+        }
+        ctx->pixel_format          = pxl_fmt_spec.ff_id;
+        NSNumber     *pixel_format = [NSNumber numberWithUnsignedInt:pxl_fmt_spec.avf_id];
+        NSDictionary *capture_dict = [NSDictionary dictionaryWithObject:pixel_format
+                                                   forKey:(id)kCVPixelBufferPixelFormatTypeKey];
+        [out setVideoSettings:capture_dict];
 
         AVFFrameReceiver* delegate = [[AVFFrameReceiver alloc] initWithContext:ctx];
 
@@ -259,8 +330,7 @@ static int get_video_config(AVFormatContext *s)
     stream->codec->codec_type = AVMEDIA_TYPE_VIDEO;
     stream->codec->width      = (int)image_buffer_size.width;
     stream->codec->height     = (int)image_buffer_size.height;
-    // No support for pixel formats for now using default one
-    stream->codec->pix_fmt    = AV_PIX_FMT_BGR32;
+    stream->codec->pix_fmt    = ctx->pixel_format;
 
     CFRelease(ctx->current_frame);
     ctx->current_frame = nil;
@@ -278,7 +348,6 @@ static void destroy_context(AVFoundationCaptureContext* ctx)
     [session stopRunning];
 
     ctx->session = NULL;
-
 
     pthread_mutex_destroy(&ctx->frame_lock);
     pthread_cond_destroy(&ctx->frame_wait_cond);
@@ -337,7 +406,7 @@ static int setup_streams(AVFormatContext *s)
         if (matches.count > 0) {
             for (NSTextCheckingResult *match in matches) {
                 NSRange range = [match rangeAtIndex:0];
-                NSString *uniqueID = [filename substringWithRange:range];
+                NSString *uniqueID = [filename substringWithRange:NSMakeRange(range.location + 1, range.length-2)];
                 av_log(s, AV_LOG_INFO, "opening device with ID: %s\n",[uniqueID UTF8String]);
                 if (!(device = [AVCaptureDevice deviceWithUniqueID:uniqueID])) {
                     // report error
