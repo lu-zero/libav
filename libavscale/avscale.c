@@ -16,6 +16,9 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
+#include <string.h>
+
 #include "libavutil/mem.h"
 #include "internal.h"
 
@@ -59,20 +62,23 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
     AVScaleFilterStage *stage = 0;
     int ret;
 
-    ctx->src_fmt = src->pixfmt;
-    ctx->dst_fmt = dst->pixfmt;
+    // XXX luzero stabs anton because avformaton is not refcounted
+    ctx->src_fmt = src->formaton;
+    ctx->dst_fmt = dst->formaton;
+    // XXX luzero blames kostya
+    // TODO av_formaton_clone and/or av_formaton_ref
     ctx->cur_w   = src->width;
     ctx->cur_h   = src->height;
     ctx->dst_w   = dst->width;
     ctx->dst_h   = dst->height;
     ctx->cur_fmt = *ctx->src_fmt;
 
-    if (ctx->src_fmt->colourspace == ctx->dst_fmt->colourspace) {
+    if (ctx->src_fmt->space == ctx->dst_fmt->space) {
         if ( ctx->src_fmt->component_desc[0].packed &&
             !ctx->dst_fmt->component_desc[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
                 return ret;
-        } else if (ctx->src_fmt->entry_size != ctx->dst_fmt->entry_size) {
+        } else if (ctx->src_fmt->component_desc[0].step != ctx->dst_fmt->component_desc[0].step) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
                 return ret;
             if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
@@ -84,8 +90,8 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
             if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
                 return ret;
         }
-    } else if (ctx->src_fmt->colourspace == AVS_RGB &&
-               ctx->dst_fmt->colourspace == AVS_YUV) {
+    } else if (ctx->src_fmt->space == AVS_RGB &&
+               ctx->dst_fmt->space == AVS_YUV) {
         if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
             return ret;
         if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h) {
@@ -104,12 +110,12 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
 
 uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id)
 { // currently a simple hack - it has to be extended for e.g. NV12
-    if (component_id >= src->pixfmt->components)
+    if (component_id >= src->formaton->nb_components)
         return 0;
-    if (!src->pixfmt->component_desc[component_id].packed)
-        return src->data[src->pixfmt->component_desc[component_id].plane];
+    if (!src->formaton->component_desc[component_id].packed)
+        return src->data[src->formaton->component_desc[component_id].plane];
     else
-        return src->data[0] + src->pixfmt->component_desc[component_id].off;
+        return src->data[0] + src->formaton->component_desc[component_id].off;
 }
 
 int avscale_get_component_stride(AVFrame *src, int component_id)
@@ -131,7 +137,6 @@ int avscale_process_frame(AVScaleContext *ctx, AVFrame *srcf, AVFrame *dstf)
     int  sstride[AVSCALE_MAX_COMPONENTS];
     uint8_t *dst[AVSCALE_MAX_COMPONENTS];
     int  dstride[AVSCALE_MAX_COMPONENTS];
-    int w[AVSCALE_MAX_COMPONENTS], h[AVSCALE_MAX_COMPONENTS];
     uint8_t *src2[AVSCALE_MAX_COMPONENTS];
     uint8_t *dst2[AVSCALE_MAX_COMPONENTS];
 
@@ -183,6 +188,8 @@ int avscale_process_frame(AVScaleContext *ctx, AVFrame *srcf, AVFrame *dstf)
         }
         stage = stage->next;
     }
+
+    return 0;
 }
 
 void avscale_free_context(AVScaleContext *ctx)

@@ -23,6 +23,7 @@ HEADERS = adler32.h                                                     \
           eval.h                                                        \
           fifo.h                                                        \
           file.h                                                        \
+          formaton.h                                                    \
           frame.h                                                       \
           hmac.h                                                        \
           hwcontext.h                                                   \
@@ -85,6 +86,7 @@ OBJS = adler32.o                                                        \
        file.o                                                           \
        file_open.o                                                      \
        float_dsp.o                                                      \
+       formaton.o                                                       \
        frame.o                                                          \
        hmac.o                                                           \
        hwcontext.o                                                      \

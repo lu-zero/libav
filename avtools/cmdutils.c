@@ -33,6 +33,7 @@
 #include "libavformat/avformat.h"
 #include "libavfilter/avfilter.h"
 #include "libavdevice/avdevice.h"
+#include "libavscale/avscale.h"
 #include "libavresample/avresample.h"
 #include "libswscale/swscale.h"
 #include "libavutil/attributes.h"
@@ -815,6 +816,7 @@ static void print_all_libs_info(int flags, int level)
     PRINT_LIB_INFO(avdevice, AVDEVICE, flags, level);
     PRINT_LIB_INFO(avfilter, AVFILTER, flags, level);
     PRINT_LIB_INFO(avresample, AVRESAMPLE, flags, level);
+    PRINT_LIB_INFO(avscale,  AVSCALE,  flags, level);
     PRINT_LIB_INFO(swscale,  SWSCALE,  flags, level);
 }
 

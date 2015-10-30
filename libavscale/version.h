@@ -27,7 +27,7 @@
 
 #include "libavutil/version.h"
 
-#define LIBAVSCALE_VERSION_MAJOR  1
+#define LIBAVSCALE_VERSION_MAJOR  0
 #define LIBAVSCALE_VERSION_MINOR  0
 #define LIBAVSCALE_VERSION_MICRO  0
 

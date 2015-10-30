@@ -121,6 +121,7 @@ Component options:
   --disable-avformat       disable libavformat build
   --disable-avscale        disable libavscale build
   --disable-avutil         disable libavutil build
+  --disable-avscale        disable libavscale build
   --disable-swscale        disable libswscale build
   --disable-avfilter       disable video filter support [no]
   --disable-avresample     disable libavresample build [no]
@@ -2551,7 +2552,7 @@ avutil_extralibs="clock_gettime_extralibs cuda_extralibs libm_extralibs libmfx_e
 swscale_extralibs="libm_extralibs"
 
 # programs
-avconv_deps="avcodec avfilter avformat avresample swscale"
+avconv_deps="avcodec avfilter avformat avresample avscale swscale"
 avconv_select="aformat_filter anull_filter asyncts_filter atrim_filter format_filter
                fps_filter null_filter resample_filter scale_filter
                trim_filter"

@@ -25,6 +25,7 @@
 #include "imgutils.h"
 #include "mem.h"
 #include "samplefmt.h"
+#include "formaton.h"
 
 static void get_frame_defaults(AVFrame *frame)
 {
@@ -43,6 +44,8 @@ static void get_frame_defaults(AVFrame *frame)
     frame->colorspace          = AVCOL_SPC_UNSPECIFIED;
     frame->color_range         = AVCOL_RANGE_UNSPECIFIED;
     frame->chroma_location     = AVCHROMA_LOC_UNSPECIFIED;
+
+    av_formaton_free(&frame->formaton);
 }
 
 static void free_side_data(AVFrameSideData **ptr_sd)
@@ -89,10 +92,10 @@ void av_frame_free(AVFrame **frame)
 
 static int get_video_buffer(AVFrame *frame, int align)
 {
-    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
     int ret, i;
 
-    if (!desc)
+    frame->formaton = av_formaton_from_pixfmt(frame->format);
+    if (!frame->formaton)
         return AVERROR(EINVAL);
 
     if ((ret = av_image_check_size(frame->width, frame->height, 0, NULL)) < 0)
@@ -111,10 +114,10 @@ static int get_video_buffer(AVFrame *frame, int align)
             frame->linesize[i] = FFALIGN(frame->linesize[i], align);
     }
 
-    for (i = 0; i < 4 && frame->linesize[i]; i++) {
+    for (i = 0; i < frame->formaton->nb_components && frame->linesize[i]; i++) {
         int h = frame->height;
         if (i == 1 || i == 2)
-            h = AV_CEIL_RSHIFT(h, desc->log2_chroma_h);
+            h = AV_CEIL_RSHIFT(h, frame->formaton->component_desc[i].h_sub_log);
 
         frame->buf[i] = av_buffer_alloc(frame->linesize[i] * h);
         if (!frame->buf[i])
@@ -122,7 +125,10 @@ static int get_video_buffer(AVFrame *frame, int align)
 
         frame->data[i] = frame->buf[i]->data;
     }
-    if (desc->flags & AV_PIX_FMT_FLAG_PAL || desc->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
+
+    // XXX luzero wants full fledged palettes
+    if (frame->formaton->flags & AV_PIX_FMT_FLAG_PAL ||
+        frame->formaton->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
         av_buffer_unref(&frame->buf[1]);
         frame->buf[1] = av_buffer_alloc(1024);
         if (!frame->buf[1])

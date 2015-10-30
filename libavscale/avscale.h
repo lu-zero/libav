@@ -21,36 +21,15 @@
 
 #include <stdint.h>
 
+#include "libavutil/formaton.h"
 #include "libavutil/frame.h"
 #include "libavutil/pixdesc.h"
 
-#define AVSCALE_MAX_COMPONENTS 5
+#include "version.h"
 
-typedef struct AVChromaton {
-    int plane;
-    int h_sub_log, v_sub_log; ///< subsampling information
-    int off; ///< offset to the starting element - e.g. 0 for Y, 1 for U and 3 for V in YUYV
-    int shift; ///< component shift for packed, e.g. for RGB565 it will be 11,5,0
-    int bpp;   ///< bits per component, e.g. for packed RGB565 you'll have 5,6,5
-    int packed; ///< if component is packed with others (e.g. RGB24 - 1,1,1, NV12 - 0,1,1)
-    int next; ///< offset to the next element - e.g. 2 for Y and 4 for U and V in YUYV
-} AVChromaton;
-
-typedef struct AVPixelFormaton {
-    const char *name;
-
-    unsigned flags; // has alpha, uses BE order, uses palette etc
-    int entry_size; // might serve useful for packed formats - e.g. 4 or 2 bytes per entry
-
-    enum AVColorRange range;
-    enum AVColorPrimaries primaries;
-    enum AVColorTransferCharacteristic trc;
-    enum AVColorSpace colorspace;
-    enum AVChromaLocation chroma_location;
-
-    int nb_components;
-    AVChromaton component_desc[AVSCALE_MAX_COMPONENTS];
-} AVPixelFormaton;
+// XXX luzero is reading a comic book so this values are random
+#define AVS_RGB 0
+#define AVS_YUV 1
 
 typedef struct AVScaleContext AVScaleContext;
 
@@ -119,5 +98,9 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst);
  */
 int avscale_process_frame(AVScaleContext *c, AVFrame *dst, AVFrame *src);
 
-#endif /* AVSCALE_AVSCALE_H */
 
+unsigned avscale_version(void);
+const char *avscale_configuration(void);
+const char *avscale_license(void);
+
+#endif /* AVSCALE_AVSCALE_H */
