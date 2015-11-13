@@ -126,11 +126,20 @@ static int get_video_buffer(AVFrame *frame, int align)
         frame->data[i] = frame->buf[i]->data;
     }
 
-    // XXX luzero wants full fledged palettes
     if (frame->formaton->flags & AV_PIX_FMT_FLAG_PAL ||
         frame->formaton->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
+        int size;
+
+        // XXX Compatibility until the palette_entries information is
+        // stored somewhere.
+        if (frame->formaton->nb_palette_entries) {
+            size = frame->formaton->nb_palette_entries *
+                   frame->formaton->pixel_next;
+        } else
+            size = 1024;
+
         av_buffer_unref(&frame->buf[1]);
-        frame->buf[1] = av_buffer_alloc(1024);
+        frame->buf[1] = av_buffer_alloc(size);
         if (!frame->buf[1])
             goto fail;
         frame->data[1] = frame->buf[1]->data;
