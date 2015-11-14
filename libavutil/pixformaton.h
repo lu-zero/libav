@@ -22,8 +22,21 @@
 
 #include "pixdesc.h"
 
+/**
+ * The format is big-endian
+ */
 #define AV_PIX_FORMATON_FLAG_BE     (1 << 0)
+/**
+ * There is an alpha component
+ *
+ * @note: The alpha component is always the last component
+ */
 #define AV_PIX_FORMATON_FLAG_ALPHA  (1 << 1)
+/**
+ * The format is palettized
+ *
+ * The components describe the palette.
+ */
 #define AV_PIX_FORMATON_FLAG_PAL    (1 << 2)
 
 /**
@@ -102,7 +115,31 @@ typedef struct AVPixelChromaton {
     int packed;
 } AVPixelChromaton;
 
+
+/**
+ * Pixel format description
+ *
+ * The structure describes the pixel format as whole.
+ *
+ * It expects at many as AV_PIX_FORMATON_COMPONENTS components.
+ */
 typedef struct AVPixelFormaton {
+    /**
+     * Defines how to interpret the components
+     *
+     * The components in the formaton are enumerated in fixed order
+     * depending on the model.
+     *
+     * examples:
+     *
+     * For YUYV it is AV_COL_MODEL_YUV and the first component is
+     * Y, the second U and the third V.
+     *
+     * For BGRA it is AV_COL_MODEL_RGB and the first component is
+     * R, the second G, the third B and the last Alpha.
+     */
+    enum AVColorModel model;
+
     /**
      * Or-ed AV_PIX_FORMATON_FLAG_
      */
@@ -112,8 +149,15 @@ typedef struct AVPixelFormaton {
      * padding.
      *
      * Useful to move to the next pixel in packeted formats.
+     * Useful to move to the next pixel in non-planar formats and
+     * to compute the palette size.
      *
      * It is set to 0 for planar and quasi-planar formats.
+     *
+     * examples:
+     *
+     * For NV12 it is set to 0
+     * For YUYV it is set to 4
      */
     int pixel_next;
 
@@ -122,7 +166,10 @@ typedef struct AVPixelFormaton {
      */
     int nb_palette_entries;
 
-    enum AVColorModel model;
+
+    /**
+     * Standard-specific model details
+     */
     enum AVColorRange range;
     enum AVColorPrimaries primaries;
     enum AVColorTransferCharacteristic transfer;
