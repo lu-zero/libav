@@ -17,12 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVUTIL_FORMATON_H
-#define AVUTIL_FORMATON_H
-
-#include <stdint.h>
+#ifndef AVUTIL_PIXFORMATON_H
+#define AVUTIL_PIXFORMATON_H
 
 #include "pixdesc.h"
+
+#define AV_PIX_FORMATON_FLAG_BE     (1 << 0)
+#define AV_PIX_FORMATON_FLAG_ALPHA  (1 << 1)
+#define AV_PIX_FORMATON_FLAG_PAL    (1 << 2)
 
 /**
  * Component description
@@ -98,15 +100,9 @@ typedef struct AVPixelChromaton {
      * For NV12 - 0,1,1
      */
     int packed;
-
-} AVChromaton;
-
-
+} AVPixelChromaton;
 
 typedef struct AVPixelFormaton {
-#define AV_PIX_FORMATON_FLAG_BE     (1 << 0)
-#define AV_PIX_FORMATON_FLAG_ALPHA  (1 << 1)
-#define AV_PIX_FORMATON_FLAG_PAL    (1 << 2)
     /**
      * Or-ed AV_PIX_FORMATON_FLAG_
      */
@@ -141,5 +137,4 @@ typedef struct AVPixelFormaton {
 AVPixelFormaton *av_formaton_from_pixfmt(enum AVPixelFormat pix_fmt);
 void av_formaton_free(AVPixelFormaton **formaton);
 
-
-#endif /* AVUTIL_FORMATON_H */
+#endif /* AVUTIL_PIXFORMATON_H */

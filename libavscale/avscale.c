@@ -56,7 +56,6 @@ err:
     return ret;
 }
 
-
 // FIXME: proof of a concept
 int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
 {
@@ -79,7 +78,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
             !ctx->dst_fmt->component_desc[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
                 return ret;
-        } else if (ctx->src_fmt->component_desc[0].step != ctx->dst_fmt->component_desc[0].step) {
+        } else if (ctx->src_fmt->component_desc[0].next != ctx->dst_fmt->component_desc[0].next) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
                 return ret;
             if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
@@ -91,8 +90,8 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
             if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
                 return ret;
         }
-    } else if (ctx->src_fmt->space == AVS_RGB &&
-               ctx->dst_fmt->space == AVS_YUV) {
+    } else if (ctx->src_fmt->model == AVCOL_MODEL_RGB &&
+               ctx->dst_fmt->model == AVCOL_MODEL_YUV) {
         if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
             return ret;
         if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h) {
@@ -116,7 +115,7 @@ uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id)
     if (!src->formaton->component_desc[component_id].packed)
         return src->data[src->formaton->component_desc[component_id].plane];
     else
-        return src->data[0] + src->formaton->component_desc[component_id].off;
+        return src->data[0] + src->formaton->component_desc[component_id].offset;
 }
 
 int avscale_get_component_stride(AVFrame *src, int component_id)
@@ -193,10 +192,12 @@ int avscale_process_frame(AVScaleContext *ctx, AVFrame *srcf, AVFrame *dstf)
     return 0;
 }
 
-void avscale_free_context(AVScaleContext *ctx)
+void avscale_free(AVScaleContext **pctx)
 {
+    AVScaleContext *ctx;
     AVScaleFilterStage *s, *next;
 
+    ctx = *pctx;
     if (!ctx)
         return;
 
@@ -210,5 +211,7 @@ void avscale_free_context(AVScaleContext *ctx)
         s = next;
     }
     ctx->head = ctx->tail = 0;
+
+    *pctx = NULL;
 }
 

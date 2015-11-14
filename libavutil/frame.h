@@ -36,7 +36,7 @@
 #include "pixfmt.h"
 #include "version.h"
 
-#include "formaton.h"
+#include "pixformaton.h"
 
 /**
  * @defgroup lavu_frame AVFrame

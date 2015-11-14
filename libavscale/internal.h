@@ -22,8 +22,11 @@
 
 #include "libavutil/dict.h"
 #include "libavutil/log.h"
+#include "libavutil/pixformaton.h"
 
 #include "avscale.h"
+
+#define AVSCALE_MAX_COMPONENTS AV_PIX_FORMATON_COMPONENTS
 
 typedef struct AVScaleFilterStage {
     void (*deinit)(struct AVScaleFilterStage *stage);

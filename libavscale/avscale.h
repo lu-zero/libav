@@ -20,17 +20,10 @@
 #ifndef AVSCALE_AVSCALE_H
 #define AVSCALE_AVSCALE_H
 
-#include <stdint.h>
-
-#include "libavutil/formaton.h"
 #include "libavutil/frame.h"
 #include "libavutil/pixdesc.h"
 
 #include "version.h"
-
-// XXX luzero is reading a comic book so this values are random
-#define AVS_RGB 0
-#define AVS_YUV 1
 
 typedef struct AVScaleContext AVScaleContext;
 
@@ -62,15 +55,15 @@ AVScaleContext *avscale_alloc_context(void);
  * @see avscale_build_chain
  * @see avscale_process_frame
  */
-int avscale_init_context(AVScaleContext *ctx);
+int avscale_open(AVScaleContext *ctx);
 
 /**
- * Free the avscaler context AVScaleContext.
- * If AVScaleContext is NULL, then does nothing.
+ * Free scaling context and everything associated with it and write NULL
+ * to the supplied pointer.
  *
- * @param ctx The context to free.
+ * @param ctx double pointer to the scaling context
  */
-void avscale_free_context(AVScaleContext *ctx);
+void avscale_free(AVScaleContext **ctx);
 
 /**
  * Build a conversion chain using the information contained in the
@@ -104,7 +97,14 @@ int avscale_process_frame(AVScaleContext *c, AVFrame *dst, AVFrame *src);
  */
 unsigned int avscale_version(void);
 
+/**
+ * Return the libavscale build-time configuration.
+ */
 const char *avscale_configuration(void);
+
+/**
+ * Return the libavscale license.
+ */
 const char *avscale_license(void);
 
 #endif /* AVSCALE_AVSCALE_H */

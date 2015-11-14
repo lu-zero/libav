@@ -18,7 +18,7 @@
 
 #include <string.h>
 
-#include "formaton.h"
+#include "pixformaton.h"
 #include "mem.h"
 #include "pixdesc.h"
 #include "pixfmt.h"
@@ -34,9 +34,6 @@ AVPixelFormaton *av_formaton_from_pixfmt(enum AVPixelFormat pix_fmt)
     if (!desc)
         goto fail;
 
-    formaton->name = strdup(desc->name);
-    if (!formaton->name)
-        goto fail;
     formaton->flags = desc->flags;
 
     // XXX luzero disapproves
@@ -52,18 +49,17 @@ AVPixelFormaton *av_formaton_from_pixfmt(enum AVPixelFormat pix_fmt)
     formaton->nb_components = desc->nb_components;
 
     for (i = 0; i < formaton->nb_components; i++) {
-        AVChromaton *chromaton = &formaton->component_desc[i];
+        AVPixelChromaton *chromaton = &formaton->component_desc[i];
         const AVComponentDescriptor *comp = &desc->comp[i];
 
         chromaton->plane = comp->plane;
-        chromaton->step  = comp->step;
+        chromaton->next  = comp->step;
         chromaton->h_sub_log = desc->log2_chroma_w;
         chromaton->v_sub_log = desc->log2_chroma_h;
-        chromaton->off = comp->offset;
+        chromaton->offset = comp->offset;
         chromaton->shift = comp->shift;
         chromaton->depth = comp->depth;
         chromaton->packed = 0; // XXX luzero does not remember
-        chromaton->next = 0; // XXX luzero does not remember
     }
 
     return formaton;
@@ -78,6 +74,5 @@ void av_formaton_free(AVPixelFormaton **formaton)
     if (!formaton || !*formaton)
         return;
 
-    av_freep(&(*formaton)->name);
     av_freep(formaton);
 }
