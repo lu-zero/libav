@@ -24,39 +24,84 @@
 
 #include "pixdesc.h"
 
-typedef struct AVChromaton {
+/**
+ * Component description
+ *
+ * The structure describes a single component in a pixel format.
+ */
+typedef struct AVPixelChromaton {
+    /**
+     * Index of the plane in which the component is located.
+     */
     int plane;
 
     /**
-     * subsampling information
+     * The base-2 logarithm of the ratio between the component with the highest
+     * resolution and this component.
      */
     int h_sub_log, v_sub_log;
 
     /**
-     * offset to the starting element, e.g. 0 for Y, 1 for U and 3 for V in YUYV
-     */
-    int off;
-
-    /**
-     * component shift for packed, e.g. for RGB565 it will be 11,5,0
+     * Bit offset
+     *
+     * It is set if the component is not byte-aligned.
+     *
+     * The distance in bits from the start of the pixel.
+     *
+     * examples:
+     *
+     * For RGB565 it will be 11,5,0
      */
     int shift;
 
     /**
-     * bits per component, e.g. for packed RGB565 you'll have 5,6,5
+     * Component size in bits
+     *
+     * examples:
+     *
+     * For packed RGB565 you'll have 5,6,5
      */
     int depth;
 
     /**
-     * if component is packed with others (e.g. RGB24 - 1,1,1, NV12 - 0,1,1)
+     * Byte offset to the starting element
+     *
+     * It is set if the component is byte-aligned.
+     *
+     * The distance in bytes from the start of this plane to the
+     * first element of this component.
+     *
+     * examples:
+     *
+     * For YUYV: 0 for Y, 1 for U and 3 for V.
+     *
+     */
+    int offset;
+
+    /**
+     * Byte offset to the next element
+     *
+     * It is set if the component is byte-aligned.
+     *
+     * examples:
+     *
+     * For YUYV: 2 for Y and 4 for U and V
+     */
+    int next;
+
+    /**
+     * Set if the component shares the plane with another
+     *
+     * examples:
+     *
+     * For RGB24 - 1,1,1
+     * For NV12 - 0,1,1
      */
     int packed;
 
-    /**
-     * offset to the next element - e.g. 2 for Y and 4 for U and V in YUYV
-     */
-    int next;
 } AVChromaton;
+
+
 
 typedef struct AVPixelFormaton {
 #define AV_PIX_FORMATON_FLAG_BE     (1 << 0)
@@ -90,7 +135,7 @@ typedef struct AVPixelFormaton {
 
     int nb_components;
 #define AV_PIX_FORMATON_COMPONENTS 5
-    AVChromaton component_desc[AV_PIX_FORMATON_COMPONENTS];
+    AVPixelChromaton component_desc[AV_PIX_FORMATON_COMPONENTS];
 } AVPixelFormaton;
 
 AVPixelFormaton *av_formaton_from_pixfmt(enum AVPixelFormat pix_fmt);
