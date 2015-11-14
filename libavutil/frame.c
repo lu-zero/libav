@@ -45,7 +45,7 @@ static void get_frame_defaults(AVFrame *frame)
     frame->color_range         = AVCOL_RANGE_UNSPECIFIED;
     frame->chroma_location     = AVCHROMA_LOC_UNSPECIFIED;
 
-    av_formaton_free(&frame->formaton);
+    av_pixformaton_unref(&frame->formaton);
 }
 
 static void free_side_data(AVFrameSideData **ptr_sd)
@@ -94,9 +94,11 @@ static int get_video_buffer(AVFrame *frame, int align)
 {
     int ret, i;
 
-    frame->formaton = av_formaton_from_pixfmt(frame->format);
-    if (!frame->formaton)
-        return AVERROR(EINVAL);
+    if (!frame->formaton && frame->format != AV_PIX_FMT_NONE) {
+        frame->formaton = av_pixformaton_from_pixfmt(frame->format);
+        if (!frame->formaton)
+            return AVERROR(EINVAL);
+    }
 
     if ((ret = av_image_check_size(frame->width, frame->height, 0, NULL)) < 0)
         return ret;
@@ -114,10 +116,10 @@ static int get_video_buffer(AVFrame *frame, int align)
             frame->linesize[i] = FFALIGN(frame->linesize[i], align);
     }
 
-    for (i = 0; i < frame->formaton->nb_components && frame->linesize[i]; i++) {
+    for (i = 0; i < frame->formaton->pf->nb_components && frame->linesize[i]; i++) {
         int h = frame->height;
         if (i == 1 || i == 2)
-            h = AV_CEIL_RSHIFT(h, frame->formaton->component_desc[i].h_sub_log);
+            h = AV_CEIL_RSHIFT(h, frame->formaton->pf->component_desc[i].h_sub_log);
 
         frame->buf[i] = av_buffer_alloc(frame->linesize[i] * h);
         if (!frame->buf[i])
@@ -126,15 +128,15 @@ static int get_video_buffer(AVFrame *frame, int align)
         frame->data[i] = frame->buf[i]->data;
     }
 
-    if (frame->formaton->flags & AV_PIX_FMT_FLAG_PAL ||
-        frame->formaton->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
+    if (frame->formaton->pf->flags & AV_PIX_FMT_FLAG_PAL ||
+        frame->formaton->pf->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
         int size;
 
         // XXX Compatibility until the palette_entries information is
         // stored somewhere.
-        if (frame->formaton->nb_palette_entries) {
-            size = frame->formaton->nb_palette_entries *
-                   frame->formaton->pixel_next;
+        if (frame->formaton->pf->nb_palette_entries) {
+            size = frame->formaton->pf->nb_palette_entries *
+                   frame->formaton->pf->pixel_next;
         } else
             size = 1024;
 

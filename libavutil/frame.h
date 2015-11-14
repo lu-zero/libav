@@ -408,6 +408,7 @@ typedef struct AVFrame {
      */
     AVBufferRef *opaque_ref;
     AVPixelFormaton *formaton;
+    AVPixelFormatonRef *formaton;
 } AVFrame;
 
 /**

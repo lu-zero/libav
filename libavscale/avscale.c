@@ -110,12 +110,12 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
 
 uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id)
 { // currently a simple hack - it has to be extended for e.g. NV12
-    if (component_id >= src->formaton->nb_components)
+    if (component_id >= src->formaton->pf->nb_components)
         return 0;
-    if (!src->formaton->component_desc[component_id].packed)
-        return src->data[src->formaton->component_desc[component_id].plane];
+    if (!src->formaton->pf->component_desc[component_id].packed)
+        return src->data[src->formaton->pf->component_desc[component_id].plane];
     else
-        return src->data[0] + src->formaton->component_desc[component_id].offset;
+        return src->data[0] + src->formaton->pf->component_desc[component_id].offset;
 }
 
 int avscale_get_component_stride(AVFrame *src, int component_id)

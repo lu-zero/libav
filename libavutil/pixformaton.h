@@ -115,7 +115,6 @@ typedef struct AVPixelChromaton {
     int packed;
 } AVPixelChromaton;
 
-
 /**
  * Pixel format description
  *
@@ -124,6 +123,12 @@ typedef struct AVPixelChromaton {
  * It expects at many as AV_PIX_FORMATON_COMPONENTS components.
  */
 typedef struct AVPixelFormaton {
+    /**
+     * Data for internal use only, should not be accessed in any way
+     * by the callers
+     */
+    void *opaque;
+
     /**
      * Defines how to interpret the components
      *
@@ -181,7 +186,16 @@ typedef struct AVPixelFormaton {
     AVPixelChromaton component_desc[AV_PIX_FORMATON_COMPONENTS];
 } AVPixelFormaton;
 
-AVPixelFormaton *av_formaton_from_pixfmt(enum AVPixelFormat pix_fmt);
-void av_formaton_free(AVPixelFormaton **formaton);
+typedef struct AVPixelFormatonRef {
+    AVPixelFormaton *pf;
+} AVPixelFormatonRef;
+
+AVPixelFormatonRef *av_pixformaton_alloc(void);
+
+AVPixelFormatonRef *av_pixformaton_ref(AVPixelFormatonRef *pf);
+
+void av_pixformaton_unref(AVPixelFormatonRef **pf);
+
+AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt);
 
 #endif /* AVUTIL_PIXFORMATON_H */

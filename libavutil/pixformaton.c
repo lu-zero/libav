@@ -18,61 +18,121 @@
 
 #include <string.h>
 
+#include "avstring.h"
+#include "buffer.h"
 #include "pixformaton.h"
 #include "mem.h"
 #include "pixdesc.h"
 #include "pixfmt.h"
 
-AVPixelFormaton *av_formaton_from_pixfmt(enum AVPixelFormat pix_fmt)
-{
-    AVPixelFormaton *formaton = av_mallocz(sizeof(AVPixelFormaton));
-    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
-    int i;
+typedef struct AVPixelFormatonRefInternal {
+    AVPixelFormaton *pf;
+    AVBufferRef *ref;
+} AVPixelFormatonRefInternal;
 
-    if (!formaton)
+AVPixelFormatonRef *av_pixformaton_alloc(void)
+{
+    AVPixelFormaton *pf;
+    AVBufferRef *buf = NULL;
+
+    AVPixelFormatonRefInternal *pref = NULL;
+
+    buf = av_buffer_allocz(sizeof(*pf));
+    if (!buf)
         return NULL;
-    if (!desc)
+
+    pref = av_mallocz(sizeof(*pref));
+    if (!pref)
         goto fail;
 
-    formaton->flags = desc->flags;
+    pf = (AVPixelFormaton*)buf->data;
 
-    // XXX luzero disapproves
-    if (strchr(desc->name, 'j'))
-        formaton->range = AVCOL_RANGE_JPEG;
-    else
-        formaton->range = AVCOL_RANGE_UNSPECIFIED;
-    formaton->primaries = AVCOL_PRI_UNSPECIFIED;
-    formaton->transfer  = AVCOL_TRC_UNSPECIFIED;
-    formaton->space     = AVCOL_SPC_UNSPECIFIED;
-    formaton->location  = AVCHROMA_LOC_UNSPECIFIED;
+    pref->pf  = pf;
+    pref->ref = buf;
 
-    formaton->nb_components = desc->nb_components;
-
-    for (i = 0; i < formaton->nb_components; i++) {
-        AVPixelChromaton *chromaton = &formaton->component_desc[i];
-        const AVComponentDescriptor *comp = &desc->comp[i];
-
-        chromaton->plane = comp->plane;
-        chromaton->next  = comp->step;
-        chromaton->h_sub_log = desc->log2_chroma_w;
-        chromaton->v_sub_log = desc->log2_chroma_h;
-        chromaton->offset = comp->offset;
-        chromaton->shift = comp->shift;
-        chromaton->depth = comp->depth;
-        chromaton->packed = 0; // XXX luzero does not remember
-    }
-
-    return formaton;
-
+    return (AVPixelFormatonRef*)pref;
 fail:
-    av_formaton_free(&formaton);
+    av_buffer_unref(&buf);
+    av_freep(&pref);
     return NULL;
 }
 
-void av_formaton_free(AVPixelFormaton **formaton)
+AVPixelFormatonRef *av_pixformaton_ref(AVPixelFormatonRef *pf)
 {
-    if (!formaton || !*formaton)
+    AVPixelFormatonRefInternal *src = (AVPixelFormatonRefInternal*)pf;
+    AVPixelFormatonRefInternal *dst;
+
+    dst = av_mallocz(sizeof(*dst));
+    if (!dst)
+        return NULL;
+
+    dst->ref = av_buffer_ref(src->ref);
+    if (!dst->ref) {
+        av_freep(&dst);
+        return NULL;
+    }
+
+    dst->pf = src->pf;
+
+    return (AVPixelFormatonRef*)dst;
+}
+
+void av_pixformaton_unref(AVPixelFormatonRef **pref)
+{
+    AVPixelFormatonRefInternal *pref_int = (AVPixelFormatonRefInternal*)*pref;
+
+    if (!pref_int)
         return;
 
-    av_freep(formaton);
+    av_buffer_unref(&pref_int->ref);
+    av_freep(&pref_int);
+}
+
+AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
+{
+    AVPixelFormaton *pf;
+    AVPixelFormatonRef *pref;
+    const AVPixFmtDescriptor *desc;
+
+    int i;
+
+    desc = av_pix_fmt_desc_get(pix_fmt);
+    if (!desc)
+        return NULL;
+
+    pref = av_pixformaton_alloc();
+    if (!pref)
+        return NULL;
+
+    pf = pref->pf;
+
+    pf->flags = desc->flags;
+
+    if (av_strstart(desc->name, "yuvj", NULL))
+        pf->range = AVCOL_RANGE_JPEG;
+    else
+        pf->range = AVCOL_RANGE_UNSPECIFIED;
+
+    pf->primaries = AVCOL_PRI_UNSPECIFIED;
+    pf->transfer  = AVCOL_TRC_UNSPECIFIED;
+    pf->space     = AVCOL_SPC_UNSPECIFIED;
+    pf->location  = AVCHROMA_LOC_UNSPECIFIED;
+
+    pf->nb_components = desc->nb_components;
+
+    for (i = 0; i < pf->nb_components; i++) {
+        AVPixelChromaton *chromaton = &pf->component_desc[i];
+        const AVComponentDescriptor *comp = &desc->comp[i];
+
+        chromaton->plane     = comp->plane;
+        chromaton->next      = comp->step;
+        chromaton->h_sub_log = desc->log2_chroma_w;
+        chromaton->v_sub_log = desc->log2_chroma_h;
+        chromaton->offset    = comp->offset;
+        chromaton->shift     = comp->shift;
+        chromaton->depth     = comp->depth;
+        chromaton->packed    = 0; // XXX luzero does not remember
+    }
+
+    return pref;
 }
