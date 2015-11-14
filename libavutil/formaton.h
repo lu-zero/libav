@@ -64,10 +64,20 @@ typedef struct AVChromaton {
 } AVChromaton;
 
 typedef struct AVPixelFormaton {
-    unsigned flags; // has alpha, uses BE order, uses palette etc
+#define AV_PIX_FORMATON_FLAG_BE     (1 << 0)
+#define AV_PIX_FORMATON_FLAG_ALPHA  (1 << 1)
+#define AV_PIX_FORMATON_FLAG_PAL    (1 << 2)
+    /**
+     * Or-ed AV_PIX_FORMATON_FLAG_
+     */
+    unsigned flags;
     /**
      * Size of all the pixel components packed as one element including
      * padding.
+     *
+     * Useful to move to the next pixel in packeted formats.
+     *
+     * It is set to 0 for planar and quasi-planar formats.
      */
     int pixel_next;
 
@@ -76,6 +86,7 @@ typedef struct AVPixelFormaton {
      */
     int nb_palette_entries;
 
+    enum AVColorModel model;
     enum AVColorRange range;
     enum AVColorPrimaries primaries;
     enum AVColorTransferCharacteristic transfer;
@@ -83,8 +94,8 @@ typedef struct AVPixelFormaton {
     enum AVChromaLocation location;
 
     int nb_components;
-#define AVSCALE_MAX_COMPONENTS 5
-    AVChromaton component_desc[AVSCALE_MAX_COMPONENTS];
+#define AV_PIX_FORMATON_COMPONENTS 5
+    AVChromaton component_desc[AV_PIX_FORMATON_COMPONENTS];
 } AVPixelFormaton;
 
 AVPixelFormaton *av_formaton_from_pixfmt(enum AVPixelFormat pix_fmt);
