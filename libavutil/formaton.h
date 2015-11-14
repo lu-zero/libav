@@ -28,11 +28,6 @@ typedef struct AVChromaton {
     int plane;
 
     /**
-     * might serve useful for packed formats - e.g. 4 or 2 bytes per entry
-     */
-    int step;
-
-    /**
      * subsampling information
      */
     int h_sub_log, v_sub_log;
