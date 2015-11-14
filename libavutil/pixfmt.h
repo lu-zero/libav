@@ -318,13 +318,13 @@ enum AVPixelFormat {
  */
 
 enum AVColorModel {
-    AVCOL_MOD_RGB,
-    AVCOL_MOD_XYZ,
-    AVCOL_MOD_YUV,
+    AVCOL_MODEL_RGB,
+    AVCOL_MODEL_XYZ,
+    AVCOL_MODEL_YUV,
 /*
-    AVCOL_MOD_CYL, ///< HSL, HSV. HSI
-    AVCOL_MOD_CFA, ///< Bayer and other Field Arrays
-    AVCOL_MOD_OPAQUE, ///< Opaque, implementation dependent */
+    AVCOL_MODEL_CYL, ///< HSL, HSV. HSI
+    AVCOL_MODEL_CFA, ///< Bayer and other Field Arrays
+    AVCOL_MODEL_OPAQUE, ///< Opaque, implementation dependent */
 };
 
 
