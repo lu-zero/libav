@@ -64,8 +64,6 @@ typedef struct AVChromaton {
 } AVChromaton;
 
 typedef struct AVPixelFormaton {
-    const char *name;
-
     unsigned flags; // has alpha, uses BE order, uses palette etc
     /**
      * Size of all the pixel components packed as one element including
