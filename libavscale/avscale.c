@@ -23,6 +23,11 @@
 #include "libavutil/mem.h"
 #include "internal.h"
 
+AVScaleContext *avscale_alloc_context(void)
+{
+    return av_mallocz(sizeof(AVScaleContext));
+}
+
 static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
                               const char *name)
 {
