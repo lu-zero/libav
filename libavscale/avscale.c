@@ -43,8 +43,8 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
         ctx->head = s;
 
     for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
-        s->w[i] = ctx->cur_w >> ctx->cur_fmt.component_desc[i].h_sub_log;
-        s->h[i] = ctx->cur_h >> ctx->cur_fmt.component_desc[i].v_sub_log;
+        s->w[i] = ctx->cur_w >> ctx->cur_fmt->component_desc[i].h_sub_log;
+        s->h[i] = ctx->cur_h >> ctx->cur_fmt->component_desc[i].v_sub_log;
     }
 
     if ((ret = avscale_apply_kernel(ctx, name, s)) < 0)
@@ -67,16 +67,16 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
     AVScaleFilterStage *stage = 0;
     int ret;
 
-    // XXX luzero stabs anton because avformaton is not refcounted
-    ctx->src_fmt = src->formaton;
-    ctx->dst_fmt = dst->formaton;
-    // XXX luzero blames kostya
-    // TODO av_formaton_clone and/or av_formaton_ref
+    // FIXME "leaking like no tomorrow"
+    ctx->src_fmt_ref = av_pixformaton_ref(src->formaton);
+    ctx->dst_fmt_ref = av_pixformaton_ref(dst->formaton);
+    ctx->src_fmt = ctx->src_fmt_ref->pf;
+    ctx->dst_fmt = ctx->dst_fmt_ref->pf;
     ctx->cur_w   = src->width;
     ctx->cur_h   = src->height;
     ctx->dst_w   = dst->width;
     ctx->dst_h   = dst->height;
-    ctx->cur_fmt = *ctx->src_fmt;
+    ctx->cur_fmt = ctx->src_fmt;
 
     if (ctx->src_fmt->space == ctx->dst_fmt->space) {
         if ( ctx->src_fmt->component_desc[0].packed &&

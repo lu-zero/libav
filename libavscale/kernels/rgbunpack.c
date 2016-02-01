@@ -59,10 +59,10 @@ static int rgbunp_kernel_init(AVScaleContext *ctx, const AVScaleKernel *kern, AV
         return AVERROR(ENOMEM);
 
     ruc = stage->do_common_ctx;
-    ruc->roff = ctx->cur_fmt.component_desc[0].offset;
-    ruc->goff = ctx->cur_fmt.component_desc[1].offset;
-    ruc->boff = ctx->cur_fmt.component_desc[2].offset;
-    ruc->step = ctx->cur_fmt.pixel_next;
+    ruc->roff = ctx->cur_fmt->component_desc[0].offset;
+    ruc->goff = ctx->cur_fmt->component_desc[1].offset;
+    ruc->boff = ctx->cur_fmt->component_desc[2].offset;
+    ruc->step = ctx->cur_fmt->pixel_next;
 
     //todo not allocate temp buffer for planar final output
     for (i = 0; i < 3; i++) {
