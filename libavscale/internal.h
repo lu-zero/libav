@@ -56,8 +56,7 @@ typedef struct AVScaleFilterStage {
 struct AVScaleContext {
     const AVClass *av_class;
     const AVPixelFormatonRef *src_fmt_ref, *dst_fmt_ref;
-    const AVPixelFormaton *src_fmt, *dst_fmt;
-    AVPixelFormaton *cur_fmt;
+    const AVPixelFormaton *src_fmt, *dst_fmt, *cur_fmt;
     int cur_w, cur_h;
     int dst_w, dst_h;
     AVScaleFilterStage *head, *tail;
