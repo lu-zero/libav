@@ -47,6 +47,7 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
         s->h[i] = ctx->cur_h >> ctx->cur_fmt->component_desc[i].v_sub_log;
     }
 
+    av_log(ctx, AV_LOG_WARNING, "kernel %s\n", name);
     if ((ret = avscale_apply_kernel(ctx, name, s)) < 0)
         goto err;
 
@@ -81,15 +82,15 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
     if (ctx->src_fmt->space == ctx->dst_fmt->space) {
         if ( ctx->src_fmt->component_desc[0].packed &&
             !ctx->dst_fmt->component_desc[0].packed) {
-            if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
+            if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
         } else if (ctx->src_fmt->component_desc[0].next != ctx->dst_fmt->component_desc[0].next) {
-            if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
+            if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
             if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
                 if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
                     return ret;
-            if ((ret = prepare_next_stage(ctx, &stage, "rgbpck")) < 0)
+            if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
                 return ret;
         } else {
             if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
@@ -97,7 +98,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
         }
     } else if (ctx->src_fmt->model == AVCOL_MODEL_RGB &&
                ctx->dst_fmt->model == AVCOL_MODEL_YUV) {
-        if ((ret = prepare_next_stage(ctx, &stage, "rgbunp")) < 0)
+        if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
             return ret;
         if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h) {
             if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
@@ -148,8 +149,7 @@ int avscale_process_frame(AVScaleContext *ctx, AVFrame *srcf, AVFrame *dstf)
     if (!ctx->head) {
         if ((ret = avscale_build_chain(ctx, srcf, dstf)) < 0)
             return ret;
-        av_log(ctx, AV_LOG_VERBOSE, "build chain ret = %d\n",
-               ret);
+        av_log(ctx, AV_LOG_INFO, "build chain ret = %d\n", ret);
     }
 
     stage = ctx->head;
@@ -173,8 +173,10 @@ int avscale_process_frame(AVScaleContext *ctx, AVFrame *srcf, AVFrame *dstf)
                 dstride[i] = avscale_get_component_stride(dstf, i);
             }
         }
+        /* copy pointers */
         memcpy(src2, src, sizeof(src2));
         memcpy(dst2, dst, sizeof(dst2));
+
         if (stage->do_common)
             stage->do_common(stage->do_common_ctx,
                              src2, sstride, dst2, dstride,
