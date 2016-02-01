@@ -119,7 +119,7 @@ static int get_video_buffer(AVFrame *frame, int align)
     for (i = 0; i < frame->formaton->pf->nb_components && frame->linesize[i]; i++) {
         int h = frame->height;
         if (i == 1 || i == 2)
-            h = AV_CEIL_RSHIFT(h, frame->formaton->pf->component_desc[i].h_sub_log);
+            h = AV_CEIL_RSHIFT(h, frame->formaton->pf->component_desc[i].v_sub_log);
 
         frame->buf[i] = av_buffer_alloc(frame->linesize[i] * h);
         if (!frame->buf[i])
