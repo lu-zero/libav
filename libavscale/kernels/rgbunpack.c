@@ -2,10 +2,10 @@
 #include "../internal.h"
 #include "libavutil/mem.h"
 
-typedef struct RGBUnpContext {
+typedef struct RGBUnpackContext {
     int roff, goff, boff;
     int step;
-} RGBUnpContext;
+} RGBUnpackContext;
 
 static void rgbunpack(void *ctx_,
                       uint8_t *src[AVSCALE_MAX_COMPONENTS],
@@ -14,7 +14,7 @@ static void rgbunpack(void *ctx_,
                       int dstrides[AVSCALE_MAX_COMPONENTS],
                       int w, int h)
 {
-    RGBUnpContext *ctx = ctx_;
+    RGBUnpackContext *ctx = ctx_;
     uint8_t *rgb[3];
     int i, j, c;
 
@@ -48,13 +48,13 @@ static void rgbunp_free(AVScaleFilterStage *stage)
 
 static int rgbunp_kernel_init(AVScaleContext *ctx, const AVScaleKernel *kern, AVScaleFilterStage *stage, AVDictionary *opts)
 {
-    RGBUnpContext *ruc;
+    RGBUnpackContext *ruc;
     int i;
     int dstride = (ctx->cur_w + 31) & ~31;
 
     stage->do_common = rgbunpack;
     stage->deinit    = rgbunp_free;
-    stage->do_common_ctx = av_malloc(sizeof(RGBUnpContext));
+    stage->do_common_ctx = av_malloc(sizeof(RGBUnpackContext));
     if (!stage->do_common_ctx)
         return AVERROR(ENOMEM);
 
