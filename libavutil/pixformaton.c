@@ -106,7 +106,12 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
 
     pf = pref->pf;
 
-    pf->flags = desc->flags;
+    if (desc->flags & AV_PIX_FMT_FLAG_BE)
+        pf->flags |= AV_PIX_FORMATON_FLAG_BE;
+    if (desc->flags & AV_PIX_FMT_FLAG_ALPHA)
+        pf->flags |= AV_PIX_FORMATON_FLAG_ALPHA;
+    if (desc->flags & AV_PIX_FMT_FLAG_PAL)
+        pf->flags |= AV_PIX_FORMATON_FLAG_PAL;
 
     if (av_strstart(desc->name, "yuvj", NULL))
         pf->range = AVCOL_RANGE_JPEG;
