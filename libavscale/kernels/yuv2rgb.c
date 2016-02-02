@@ -47,7 +47,10 @@ static void rgb2yuv420(void *ctx,
     }
 }
 
-static int rgb2yuv_kernel_init(AVScaleContext *ctx, const AVScaleKernel *kern, AVScaleFilterStage *stage, AVDictionary *opts)
+static int rgb2yuv_kernel_init(AVScaleContext *ctx,
+                               const AVScaleKernel *kern,
+                               AVScaleFilterStage *stage,
+                               AVDictionary *opts)
 {
     stage->do_common = rgb2yuv420;
 

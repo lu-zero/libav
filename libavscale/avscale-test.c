@@ -11,19 +11,23 @@ int main(int argc, char **argv)
     int w, h;
     FILE *in, *out;
     //FIXME
-    AVFrame *src, *dst;
+    AVFrame *src = NULL, *dst = NULL;
     AVScaleContext *avsctx;
     int copy;
     int bpc = 3;
-    int ret;
+    int ret = AVERROR(ENOMEM);
     int i;
 
     if (argc < 3) {
         printf("usage: %s infile.pnm outfile.{ppm,pgm}\n", argv[0]);
-        return 0;
+        return AVERROR(EINVAL);
     }
     in  = fopen(argv[1], "rb");
+    if (!in)
+        return ret;
     out = fopen(argv[2], "wb");
+    if (!out)
+        goto end;
     copy = !!strstr(argv[2], ".ppm");
 
     fscanf(in, "P6\n%d %d\n255\n", &w, &h);
@@ -31,17 +35,18 @@ int main(int argc, char **argv)
 
     src = av_frame_alloc();
     dst = av_frame_alloc();
-    if (!src || !dst) {
-        av_frame_free(&src);
-        av_frame_free(&dst);
-        return 1;
-    }
+    if (!src || !dst)
+        goto end;
+    av_frame_unref(src);
+    av_frame_unref(dst);
 
     src->width = w;
     src->height = h;
     src->linesize[0] = w * bpc;
     src->formaton = av_pixformaton_from_pixfmt(AV_PIX_FMT_RGB24);
     src->data[0] = av_malloc(src->linesize[0] * h);
+    if (!src->data[0])
+        goto end;
 
     fread(src->data[0], src->linesize[0], h, in);
 
@@ -53,6 +58,8 @@ int main(int argc, char **argv)
     }
     if (copy) {
         dst->data[0] = av_malloc(dst->width * dst->height * 3);
+        if (!dst->data[0])
+            goto end;
         dst->linesize[0] = dst->width * 3;
         dst->formaton =  av_pixformaton_from_pixfmt(AV_PIX_FMT_RGB24);
         dst->data[1] = dst->data[2] = 0;
@@ -63,11 +70,13 @@ int main(int argc, char **argv)
         dst->linesize[1] = dst->width / 2;
         dst->data[2] = av_malloc(dst->width * dst->height / 4);
         dst->linesize[2] = dst->width / 2;
+        if (!dst->data[0] || !dst->data[1] || !dst->data[2])
+            goto end;
         dst->formaton =  av_pixformaton_from_pixfmt(AV_PIX_FMT_YUV420P);
     }
     avsctx = avscale_alloc_context();
     if (!avsctx)
-        return AVERROR(ENOMEM);
+        goto end;
 
     ret = avscale_process_frame(avsctx, src, dst);
     printf(ret ? "Failed\n" : "Succeeded\n");
@@ -84,12 +93,23 @@ int main(int argc, char **argv)
             fwrite(dst->data[2] + i * dst->linesize[2], w/2, 1, out);
         }
     }
-    av_free(src->data[0]);
-    for (i = 0; i < 3; i++)
-        av_free(dst->data[i]);
-    fclose(in);
-    fclose(out);
+
+    ret = 0;
+
+end:
+    if (src)
+        av_freep(&src->data[0]);
+    if (dst)
+        for (i = 0; i < 3; i++)
+            av_freep(&dst->data[i]);
+    av_frame_free(&src);
+    av_frame_free(&dst);
+
     avscale_free(&avsctx);
+    if (in)
+        fclose(in);
+    if (out)
+        fclose(out);
 
     return 0;
 }
