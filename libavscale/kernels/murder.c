@@ -25,7 +25,7 @@ static int murder_kernel_init(AVScaleContext *ctx,
     return 0;
 }
 
-static const AVScaleKernel avs_murder_kernel = {
+const AVScaleKernel avs_murder_kernel = {
     .name = "murder",
     .kernel_init = murder_kernel_init,
 };
