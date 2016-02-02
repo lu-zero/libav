@@ -31,7 +31,6 @@ static void component_scale(void *ctx_,
     }
 }
 
-#if 0
 static void scale_deinit(AVScaleFilterStage *stage)
 {
     int i;
@@ -42,7 +41,6 @@ static void scale_deinit(AVScaleFilterStage *stage)
         av_freep(&stage->do_component_ctx[i]);
     }
 }
-#endif
 
 static int scale_kernel_init(AVScaleContext *ctx,
                              const AVScaleKernel *kern,
@@ -57,6 +55,9 @@ static int scale_kernel_init(AVScaleContext *ctx,
         av_log(ctx, AV_LOG_ERROR, "scale returning %d\n", AVERROR(ENOSYS));
         return AVERROR(ENOSYS);
     }
+
+    stage->deinit = scale_deinit;
+
     for (i = 0; i < n; i++) {
         stage->do_component[i] = component_scale;
 

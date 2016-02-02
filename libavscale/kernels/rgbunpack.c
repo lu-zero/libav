@@ -36,7 +36,7 @@ static void rgbunpack(void *ctx_,
     }
 }
 
-static void rgbunp_free(AVScaleFilterStage *stage)
+static void rgbunpack_free(AVScaleFilterStage *stage)
 {
     int i;
     for (i = 0; i < 3; i++) {
@@ -46,14 +46,17 @@ static void rgbunp_free(AVScaleFilterStage *stage)
     av_freep(&stage->do_common_ctx);
 }
 
-static int rgbunp_kernel_init(AVScaleContext *ctx, const AVScaleKernel *kern, AVScaleFilterStage *stage, AVDictionary *opts)
+static int rgbunpack_kernel_init(AVScaleContext *ctx,
+                                 const AVScaleKernel *kern,
+                                 AVScaleFilterStage *stage,
+                                 AVDictionary *opts)
 {
     RGBUnpackContext *ruc;
     int i;
     int dstride = (ctx->cur_w + 31) & ~31;
 
     stage->do_common = rgbunpack;
-    stage->deinit    = rgbunp_free;
+    stage->deinit    = rgbunpack_free;
     stage->do_common_ctx = av_malloc(sizeof(RGBUnpackContext));
     if (!stage->do_common_ctx)
         return AVERROR(ENOMEM);
@@ -75,7 +78,7 @@ static int rgbunp_kernel_init(AVScaleContext *ctx, const AVScaleKernel *kern, AV
     return 0;
 }
 
-const AVScaleKernel avs_rgbunp_kernel = {
+const AVScaleKernel avs_rgbunpack_kernel = {
     .name = "rgbunpack",
-    .kernel_init = rgbunp_kernel_init,
+    .kernel_init = rgbunpack_kernel_init,
 };
