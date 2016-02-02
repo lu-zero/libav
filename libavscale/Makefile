@@ -6,6 +6,7 @@ HEADERS = avscale.h         \
 KERNELS += kernels/rgb2yuv.o          \
            kernels/rgbpack.o          \
            kernels/rgbunpack.o        \
+           kernels/scale.o            \
 
 OBJS = avscale.o                                                        \
        internal.o                                                       \

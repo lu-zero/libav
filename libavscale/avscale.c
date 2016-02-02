@@ -79,12 +79,23 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
     ctx->dst_h   = dst->height;
     ctx->cur_fmt = ctx->src_fmt;
 
+    /*XXX proper generic approach would determine first
+     * 1) if you convert packed->planar, planar->packed or same->same
+     * 2) if it needs scaling
+     * 3) if it needs format conversion
+     * 4) if it needs color matrix
+     * 5) maybe gamma
+     * and only then build proper chain */
+
     if (ctx->src_fmt->model == ctx->dst_fmt->model) {
+        /* RGB packed to planar */
         if ( ctx->src_fmt->component_desc[0].packed &&
             !ctx->dst_fmt->component_desc[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
-        } else if (ctx->src_fmt->component_desc[0].next != ctx->dst_fmt->component_desc[0].next) {
+        /* Diffrent RGB format OR different sizes */
+        } else if ((ctx->src_fmt->pixel_next != ctx->dst_fmt->pixel_next) ||
+                   (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
             if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
@@ -92,6 +103,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
                     return ret;
             if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
                 return ret;
+        /* Same format */
         } else {
             if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
                 return ret;
