@@ -37,9 +37,9 @@ typedef struct AVScaleFilterStage {
                       int dstrides[AVSCALE_MAX_COMPONENTS],
                       int w, int h);
     void (*do_component[AVSCALE_MAX_COMPONENTS])(void *ctx,
-                                             uint8_t *src, int sstride,
-                                             uint8_t *dst, int dstride,
-                                             int w, int h);
+                                                 uint8_t *src, int sstride,
+                                                 uint8_t *dst, int dstride,
+                                                 int w, int h);
 
     void *do_common_ctx;
     void *do_component_ctx[AVSCALE_MAX_COMPONENTS];
@@ -68,17 +68,19 @@ typedef struct AVScaleKernel {
     // init worker-specific contexts and set working functions
     // e.g. for YUV2RGB it will init do_common_ctx with YUV2RGB tables
     // and set do_common = convert_yuv2rgb
-    int (*kernel_init)(AVScaleContext *ctx, const struct AVScaleKernel *kern,
+    int (*kernel_init)(AVScaleContext *ctx,
+                       const struct AVScaleKernel *kern,
                        AVScaleFilterStage *stage,
                        AVDictionary *opts);
 } AVScaleKernel;
 
 const AVScaleKernel *avscale_find_kernel(const char *name);
-int avscale_apply_kernel(AVScaleContext *ctx, const char *name, AVScaleFilterStage *stage);
+int avscale_apply_kernel(AVScaleContext *ctx,
+                         const char *name,
+                         AVScaleFilterStage *stage);
 
 uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id);
 int avscale_get_component_stride(AVFrame *src, int component_id);
-
 
 
 #endif /* AVSCALE_INTERNAL_H */

@@ -3,7 +3,8 @@ NAME = avscale
 HEADERS = avscale.h         \
           version.h         \
 
-KERNELS += kernels/rgb2yuv.o          \
+KERNELS += kernels/murder.o           \
+           kernels/rgb2yuv.o          \
            kernels/rgbpack.o          \
            kernels/rgbunpack.o        \
            kernels/scale.o            \
