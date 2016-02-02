@@ -116,7 +116,7 @@ static int rgbpack_kernel_init(AVScaleContext *ctx,
         rc->off[i]   = ctx->dst_fmt->component_desc[i].offset;
         rc->shift[i] = ctx->dst_fmt->component_desc[i].shift;
     }
-    rc->step  = ctx->dst_fmt->pixel_next;
+    rc->step  = ctx->dst_fmt->pixel_size;
     rc->be    = ctx->dst_fmt->flags & AV_PIX_FORMATON_FLAG_BE;
     rc->inbpp = ctx->cur_fmt->component_desc[0].depth;
 

@@ -131,7 +131,7 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
     pf->nb_components = desc->nb_components;
 
     if (!(desc->flags & AV_PIX_FMT_FLAG_PLANAR))
-        pf->pixel_next = (desc->comp[0].depth * desc->nb_components + 7) >> 3;
+        pf->pixel_size = (desc->comp[0].depth * desc->nb_components + 7) >> 3;
 
     for (i = 0; i < pf->nb_components; i++) {
         AVPixelChromaton *chromaton = &pf->component_desc[i];

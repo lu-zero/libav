@@ -164,7 +164,7 @@ typedef struct AVPixelFormaton {
      * For NV12 it is set to 0
      * For YUYV it is set to 4
      */
-    int pixel_next;
+    int pixel_size;
 
     /**
      * Number of entries in the palette if a palette is present.

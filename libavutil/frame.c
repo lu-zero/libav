@@ -136,7 +136,7 @@ static int get_video_buffer(AVFrame *frame, int align)
         // stored somewhere.
         if (frame->formaton->pf->nb_palette_entries) {
             size = frame->formaton->pf->nb_palette_entries *
-                   frame->formaton->pf->pixel_next;
+                   frame->formaton->pf->pixel_size;
         } else
             size = 1024;
 

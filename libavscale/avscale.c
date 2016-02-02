@@ -94,7 +94,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
         /* Diffrent RGB format OR different sizes */
-        } else if ((ctx->src_fmt->pixel_next != ctx->dst_fmt->pixel_next) ||
+        } else if ((ctx->src_fmt->pixel_size != ctx->dst_fmt->pixel_size) ||
                    (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
