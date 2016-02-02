@@ -113,6 +113,11 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
     if (desc->flags & AV_PIX_FMT_FLAG_PAL)
         pf->flags |= AV_PIX_FORMATON_FLAG_PAL;
 
+    if (desc->flags & AV_PIX_FMT_FLAG_RGB)
+        pf->model = AVCOL_MODEL_RGB;
+    else
+        pf->model = AVCOL_MODEL_YUV;
+
     if (av_strstart(desc->name, "yuvj", NULL))
         pf->range = AVCOL_RANGE_JPEG;
     else
@@ -136,7 +141,7 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
         chromaton->offset    = comp->offset;
         chromaton->shift     = comp->shift;
         chromaton->depth     = comp->depth;
-        chromaton->packed    = 0; // XXX luzero does not remember
+        chromaton->packed    = !(desc->flags & AV_PIX_FMT_FLAG_PLANAR);
     }
 
     return pref;

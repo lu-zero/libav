@@ -79,7 +79,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
     ctx->dst_h   = dst->height;
     ctx->cur_fmt = ctx->src_fmt;
 
-    if (ctx->src_fmt->space == ctx->dst_fmt->space) {
+    if (ctx->src_fmt->model == ctx->dst_fmt->model) {
         if ( ctx->src_fmt->component_desc[0].packed &&
             !ctx->dst_fmt->component_desc[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
