@@ -87,6 +87,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
      * 5) maybe gamma
      * and only then build proper chain */
 
+    /* Same color model */
     if (ctx->src_fmt->model == ctx->dst_fmt->model) {
         /* RGB packed to planar */
         if ( ctx->src_fmt->component_desc[0].packed &&
@@ -108,6 +109,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
             if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
                 return ret;
         }
+    /* Input RGB, Output YUV */
     } else if (ctx->src_fmt->model == AVCOL_MODEL_RGB &&
                ctx->dst_fmt->model == AVCOL_MODEL_YUV) {
         if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
@@ -118,8 +120,22 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
         }
         if ((ret = prepare_next_stage(ctx, &stage, "rgb2yuv")) < 0)
             return ret;
-    } else
+    /* Input YUV, Output RGB */
+    } else if (ctx->src_fmt->model == AVCOL_MODEL_YUV &&
+               ctx->dst_fmt->model == AVCOL_MODEL_RGB) {
+        if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h) {
+            if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
+                return ret;
+        }
+        if ((ret = prepare_next_stage(ctx, &stage, "yuv2rgb")) < 0)
+            return ret;
+        if (ctx->dst_fmt->component_desc[0].packed) {
+            if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
+                return ret;
+        }
+    } else {
         return AVERROR(ENOSYS);
+    }
 
     ctx->tail = stage;
 

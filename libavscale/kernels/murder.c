@@ -8,6 +8,7 @@ static void component_murder(void *ctx,
 {
     if (!src || !dst)
         return;
+    //TODO different strides
     memcpy(dst, src, sstride * h);
 }
 

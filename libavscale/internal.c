@@ -27,6 +27,7 @@ extern const AVScaleKernel avs_rgbpack_kernel;
 extern const AVScaleKernel avs_rgbunpack_kernel;
 extern const AVScaleKernel avs_rgb2yuv_kernel;
 extern const AVScaleKernel avs_scale_kernel;
+extern const AVScaleKernel avs_yuv2rgb_kernel;
 
 static const AVScaleKernel* avs_kernels[] = {
     &avs_murder_kernel,
@@ -34,6 +35,7 @@ static const AVScaleKernel* avs_kernels[] = {
     &avs_rgbunpack_kernel,
     &avs_rgb2yuv_kernel,
     &avs_scale_kernel,
+    &avs_yuv2rgb_kernel,
     NULL,
 };
 
