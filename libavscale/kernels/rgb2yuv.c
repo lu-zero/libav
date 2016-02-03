@@ -20,17 +20,25 @@ static void rgb2yuv420(void *ctx,
             dst[0][i] = av_clip_uint8(Y);
             if (!(j & 1) && !(i & 1)) {
                 int r, g, b;
-                r =   src[0][i]     + src[0][sstrides[0] + i]
-                    + src[0][i + 1] + src[0][sstrides[0] + i + 1];
-                g =   src[1][i]     + src[1][sstrides[1] + i]
-                    + src[1][i + 1] + src[1][sstrides[1] + i + 1];
-                b =   src[2][i]     + src[2][sstrides[2] + i]
-                    + src[2][i + 1] + src[2][sstrides[2] + i + 1];
+                // average to deal with subsampling
+                r = (src[0][i]     + src[0][sstrides[0] + i] +
+                     src[0][i + 1] + src[0][sstrides[0] + i + 1]) / 4;
+                g = (src[1][i]     + src[1][sstrides[1] + i] +
+                     src[1][i + 1] + src[1][sstrides[1] + i + 1]) / 4;
+                b = (src[2][i]     + src[2][sstrides[2] + i] +
+                     src[2][i + 1] + src[2][sstrides[2] + i + 1]) / 4;
+                //av_log(ctx, AV_LOG_INFO, "0x%02X 0x%02X 0x%02X\n", r, g, b);
                 U = (int)(-0.14713f * r - 0.28886f * g + 0.436f   * b);
                 V = (int)( 0.615f   * r - 0.51499f * g - 0.10001f * b);
                 dst[1][i >> 1] = av_clip_uint8(U + 128);
                 dst[2][i >> 1] = av_clip_uint8(V + 128);
             }
+#if 1
+            av_log(ctx, AV_LOG_ERROR,
+                   "0x%02X 0x%02X 0x%02X -> 0x%02X 0x%02X 0x%02X\n",
+                   src[0][i], src[1][i],     src[2][i],
+                   dst[0][i], dst[1][i >> 1],dst[2][i >> 1]);
+#endif
         }
         src[0] += sstrides[0];
         src[1] += sstrides[1];
