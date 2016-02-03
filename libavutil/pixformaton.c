@@ -139,8 +139,8 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
 
         chromaton->plane     = comp->plane;
         chromaton->next      = comp->step;
-        chromaton->h_sub_log = desc->log2_chroma_w;
-        chromaton->v_sub_log = desc->log2_chroma_h;
+        chromaton->h_sub_log = i > 0 ? desc->log2_chroma_w : 0;
+        chromaton->v_sub_log = i > 0 ? desc->log2_chroma_h : 0;
         chromaton->offset    = comp->offset;
         chromaton->shift     = comp->shift;
         chromaton->depth     = comp->depth;

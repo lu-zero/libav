@@ -23,14 +23,16 @@ int main(int argc, char **argv)
     }
     in = fopen(argv[1], "rb");
     if (!in)
-        return ret;
+        return AVERROR(ENOSYS);
     out = fopen(argv[2], "wb");
-    if (!out)
+    if (!out) {
+        ret = AVERROR(ENOSYS);
         goto end;
+    }
     copy = !!strstr(argv[2], ".ppm");
 
     fscanf(in, "P6\n%d %d\n255\n", &w, &h);
-    printf("converting %dx%d pic...\n", w, h);
+    printf("converting %dx%d pic... (copy %d)\n", w, h, copy);
 
     src = av_frame_alloc();
     dst = av_frame_alloc();
@@ -82,10 +84,10 @@ int main(int argc, char **argv)
         printf("Failed\n");
         goto end;
     }
-    printf("Success\n");
 
     w = dst->width;
     h = dst->height;
+    printf("Success %dx%d\n", w, h);
     if (copy) {
         fprintf(out, "P6\n%d %d\n255\n", w, h);
         fwrite(dst->data[0], w * 3, h, out);

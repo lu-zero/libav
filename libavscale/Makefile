@@ -15,4 +15,4 @@ OBJS = avscale.o                                                        \
        utils.o                                                          \
        $(KERNELS)
 
-TESTPROGS = avscale
+TESTPROGS = rgb2yuv yuv2rgb
