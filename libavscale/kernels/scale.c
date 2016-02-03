@@ -66,9 +66,9 @@ static int scale_kernel_init(AVScaleContext *ctx,
         if (!sc)
             return AVERROR(ENOMEM);
         sc->dst_w = AV_CEIL_RSHIFT(ctx->dst_w,
-                                   ctx->cur_fmt->component_desc[i].h_sub_log);
+                                   ctx->cur_fmt->component_desc[i].h_sub);
         sc->dst_h = AV_CEIL_RSHIFT(ctx->dst_h,
-                                   ctx->cur_fmt->component_desc[i].v_sub_log);
+                                   ctx->cur_fmt->component_desc[i].v_sub);
 
         dstride = (sc->dst_w + 31) & ~31;
 

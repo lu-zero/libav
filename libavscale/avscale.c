@@ -43,8 +43,8 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
         ctx->head = s;
 
     for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
-        s->w[i] = ctx->cur_w >> ctx->cur_fmt->component_desc[i].h_sub_log;
-        s->h[i] = ctx->cur_h >> ctx->cur_fmt->component_desc[i].v_sub_log;
+        s->w[i] = ctx->cur_w >> ctx->cur_fmt->component_desc[i].h_sub;
+        s->h[i] = ctx->cur_h >> ctx->cur_fmt->component_desc[i].v_sub;
     }
 
     av_log(ctx, AV_LOG_WARNING, "kernel %s\n", name);

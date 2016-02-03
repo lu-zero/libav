@@ -54,7 +54,7 @@ typedef struct AVPixelChromaton {
      * The base-2 logarithm of the ratio between the component with the highest
      * resolution and this component.
      */
-    int h_sub_log, v_sub_log;
+    int h_sub, v_sub;
 
     /**
      * Bit offset
