@@ -147,8 +147,8 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
         }
         if ((ret = prepare_next_stage(ctx, &stage, "yuv2rgb")) < 0)
             return ret;
-        if (ctx->dst_fmt->component_desc[0].packed) {
-            if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
+        if (!ctx->dst_fmt->component_desc[0].packed) {
+            if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
         }
     } else {

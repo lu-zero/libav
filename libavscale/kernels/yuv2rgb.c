@@ -15,14 +15,14 @@ static void yuv2rgb(void *ctx,
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
-            //TODO coefficients
-            Y = (uint8_t)(src[0][i]);
-            U = (uint8_t)(src[1][i >> 1] - 128);
-            V = (uint8_t)(src[2][i >> 1] - 128);
+            //TODO coefficients & range
+            Y = src[0][i];
+            U = src[1][i >> 1] - 128;
+            V = src[2][i >> 1] - 128;
 
-            dst[0][3*i+0] = av_clip_uint8(Y + (             91881 * V + 32768 >> 16));
-            dst[0][3*i+1] = av_clip_uint8(Y + (-22554 * U - 46802 * V + 32768 >> 16));
-            dst[0][3*i+2] = av_clip_uint8(Y + (116130 * U             + 32768 >> 16));
+            dst[0][3*i+0] = av_clip_uint8(Y + (             74698 * V + 32768 >> 16));
+            dst[0][3*i+1] = av_clip_uint8(Y + (-25861 * U - 38050 * V + 32768 >> 16));
+            dst[0][3*i+2] = av_clip_uint8(Y + (133180 * U             + 32768 >> 16));
         }
         src[0] += sstrides[0];
         src[1] += sstrides[1] * (j & 1);
