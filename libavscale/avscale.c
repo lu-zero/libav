@@ -87,8 +87,9 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
      * 5) maybe gamma
      * and only then build proper chain */
 
-    /* Same color model */
-    if (ctx->src_fmt->model == ctx->dst_fmt->model) {
+    /* Same color model (RGB) */
+    if (ctx->src_fmt->model == AVCOL_MODEL_RGB &&
+        ctx->dst_fmt->model == AVCOL_MODEL_RGB) {
         /* RGB packed to planar */
         if ( ctx->src_fmt->component_desc[0].packed &&
             !ctx->dst_fmt->component_desc[0].packed) {
@@ -97,13 +98,30 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
         /* Diffrent RGB format OR different sizes */
         } else if ((ctx->src_fmt->pixel_size != ctx->dst_fmt->pixel_size) ||
                    (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)) {
-            if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
-                return ret;
+            if (ctx->src_fmt->component_desc[0].packed)
+                if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
+                    return ret;
             if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
                 if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
                     return ret;
-            if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
+            if (ctx->dst_fmt->component_desc[0].packed)
+                if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
+                    return ret;
+        /* Same format */
+        } else {
+            if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
                 return ret;
+        }
+    /* Same color model (YUV) */
+    } else if (ctx->src_fmt->model == AVCOL_MODEL_YUV &&
+               ctx->dst_fmt->model == AVCOL_MODEL_YUV) {
+        /* Diffrent RGB format OR different sizes */
+        if ((ctx->src_fmt->pixel_size != ctx->dst_fmt->pixel_size) ||
+            (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)) {
+            if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
+                // scale does not seem to work for yuv
+                if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
+                    return ret;
         /* Same format */
         } else {
             if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
