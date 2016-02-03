@@ -8,6 +8,7 @@ KERNELS += kernels/murder.o           \
            kernels/rgbpack.o          \
            kernels/rgbunpack.o        \
            kernels/scale.o            \
+           kernels/yuv2rgb.o          \
 
 OBJS = avscale.o                                                        \
        internal.o                                                       \

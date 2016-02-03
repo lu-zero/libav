@@ -39,7 +39,6 @@ static const AVScaleKernel* avs_kernels[] = {
     NULL,
 };
 
-
 const AVScaleKernel *avscale_find_kernel(const char *name)
 {
     const AVScaleKernel **k = avs_kernels;

@@ -1,13 +1,7 @@
+#include "libavutil/common.h"
 #include "libavutil/intreadwrite.h"
 
 #include "../internal.h"
-
-static inline int clip(int a)
-{
-    if (a < 0)   return 0;
-    if (a > 255) return 255;
-                 return a;
-}
 
 static void rgb2yuv420(void *ctx,
                        uint8_t *src[AVSCALE_MAX_COMPONENTS],
@@ -23,7 +17,7 @@ static void rgb2yuv420(void *ctx,
         for (i = 0; i < w; i++) {
             //TODO coefficients
             Y = (int)(0.299f * src[0][i] + 0.587f * src[1][i] + 0.114f * src[2][i]);
-            dst[0][i] = clip(Y);
+            dst[0][i] = av_clip_uint8(Y);
             if (!(j & 1) && !(i & 1)) {
                 int r, g, b;
                 r =   src[0][i]     + src[0][sstrides[0] + i]
@@ -34,8 +28,8 @@ static void rgb2yuv420(void *ctx,
                     + src[2][i + 1] + src[2][sstrides[2] + i + 1];
                 U = (int)(-0.14713f * r - 0.28886f * g + 0.436f   * b);
                 V = (int)( 0.615f   * r - 0.51499f * g - 0.10001f * b);
-                dst[1][i >> 1] = clip(U + 128);
-                dst[2][i >> 1] = clip(V + 128);
+                dst[1][i >> 1] = av_clip_uint8(U + 128);
+                dst[2][i >> 1] = av_clip_uint8(V + 128);
             }
         }
         src[0] += sstrides[0];
@@ -66,7 +60,7 @@ static void rgb10_to_yuv420(void *ctx,
             Y = (int)(  0.299f * READ_RGB(0, i, 0)
                       + 0.587f * READ_RGB(1, i, 0)
                       + 0.114f * READ_RGB(2, i, 0));
-            dst[0][i] = clip(Y >> 2);
+            dst[0][i] = av_clip_uint8(Y >> 2);
             if (!(j & 1) && !(i & 1)) {
                 int r, g, b;
                 r =   READ_RGB(0, i,     0) + READ_RGB(0, i,     1)
@@ -77,8 +71,8 @@ static void rgb10_to_yuv420(void *ctx,
                     + READ_RGB(2, i + 1, 0) + READ_RGB(2, i + 1, 1);
                 U = (int)(-0.14713f * r - 0.28886f * g + 0.436f   * b) >> 2;
                 V = (int)( 0.615f   * r - 0.51499f * g - 0.10001f * b) >> 2;
-                dst[1][i >> 1] = clip(U + 128);
-                dst[2][i >> 1] = clip(V + 128);
+                dst[1][i >> 1] = av_clip_uint8(U + 128);
+                dst[2][i >> 1] = av_clip_uint8(V + 128);
             }
         }
         src[0] += sstrides[0];
