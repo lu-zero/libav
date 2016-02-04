@@ -22,10 +22,13 @@ int main(int argc, char **argv)
         return AVERROR(EINVAL);
     }
     in = fopen(argv[1], "rb");
-    if (!in)
+    if (!in) {
+        fprintf(stderr, "Cannot open input file\n");
         return AVERROR(ENOSYS);
+    }
     out = fopen(argv[2], "wb");
     if (!out) {
+        fprintf(stderr, "Cannot open output file\n");
         ret = AVERROR(ENOSYS);
         goto end;
     }
