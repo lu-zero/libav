@@ -55,7 +55,7 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
      * all intermediate processing is done in planar form after all
      * (because I say so). */
     if (*stage) {
-        for (i = 0; i < ctx->dst_fmt->nb_components; i++) {
+        for (i = 0; i < ctx->cur_fmt->nb_components; i++) {
             int w = AV_CEIL_RSHIFT(ctx->dst_w,
                                    ctx->cur_fmt->component[i].h_sub);
             int h = AV_CEIL_RSHIFT(ctx->dst_h,
@@ -88,13 +88,17 @@ err:
 int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
 {
     AVScaleFilterStage *stage = 0;
-    int ret;
+    int ret = 0;
+    AVPixelFormatonRef *src_fmt_ref = av_pixformaton_ref(src->formaton);
+    AVPixelFormatonRef *dst_fmt_ref = av_pixformaton_ref(dst->formaton);
 
-    // FIXME "leaking like no tomorrow"
-    ctx->src_fmt_ref = av_pixformaton_ref(src->formaton);
-    ctx->dst_fmt_ref = av_pixformaton_ref(dst->formaton);
-    ctx->src_fmt = ctx->src_fmt_ref->pf;
-    ctx->dst_fmt = ctx->dst_fmt_ref->pf;
+    if (!src_fmt_ref || !dst_fmt_ref) {
+        ret = AVERROR(ENOSYS);
+        goto end;
+    }
+
+    ctx->src_fmt = src_fmt_ref->pf;
+    ctx->dst_fmt = dst_fmt_ref->pf;
     ctx->cur_w   = src->width;
     ctx->cur_h   = src->height;
     ctx->dst_w   = dst->width;
@@ -116,23 +120,23 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
         if ( ctx->src_fmt->component[0].packed &&
             !ctx->dst_fmt->component[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
-                return ret;
+                goto end;
         /* Diffrent RGB format OR different sizes */
         } else if ((ctx->src_fmt->pixel_size != ctx->dst_fmt->pixel_size) ||
                    (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)) {
             if (ctx->src_fmt->component[0].packed)
                 if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
-                    return ret;
+                    goto end;
             if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
                 if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
-                    return ret;
+                    goto end;
             if (ctx->dst_fmt->component[0].packed)
                 if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
-                    return ret;
+                    goto end;
         /* Same format */
         } else {
             if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
-                return ret;
+                goto end;
         }
     /* Same color model (YUV) */
     } else if (ctx->src_fmt->model == AVCOL_MODEL_YUV &&
@@ -141,45 +145,49 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
         if ((ctx->src_fmt->pixel_size != ctx->dst_fmt->pixel_size) ||
             (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)) {
             if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
-                // scale does not seem to work for yuv
                 if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
-                    return ret;
+                    goto end;
         /* Same format */
         } else {
             if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
-                return ret;
+                goto end;
         }
     /* Input RGB, Output YUV */
     } else if (ctx->src_fmt->model == AVCOL_MODEL_RGB &&
                ctx->dst_fmt->model == AVCOL_MODEL_YUV) {
         if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
-            return ret;
+            goto end;
         if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h) {
             if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
-                return ret;
+                goto end;
         }
         if ((ret = prepare_next_stage(ctx, &stage, "rgb2yuv")) < 0)
-            return ret;
+            goto end;
     /* Input YUV, Output RGB */
     } else if (ctx->src_fmt->model == AVCOL_MODEL_YUV &&
                ctx->dst_fmt->model == AVCOL_MODEL_RGB) {
         if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h) {
             if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
-                return ret;
+                goto end;
         }
         if ((ret = prepare_next_stage(ctx, &stage, "yuv2rgb")) < 0)
-            return ret;
+            goto end;
         if (!ctx->dst_fmt->component[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
-                return ret;
+                goto end;
         }
     } else {
-        return AVERROR(ENOSYS);
+        ret = AVERROR(ENOSYS);
+        goto end;
     }
 
     ctx->tail = stage;
 
-    return 0;
+end:
+    av_pixformaton_unref(&src_fmt_ref);
+    av_pixformaton_unref(&dst_fmt_ref);
+
+    return ret;
 }
 
 uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id)

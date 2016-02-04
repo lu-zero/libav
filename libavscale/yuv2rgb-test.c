@@ -74,13 +74,14 @@ int main(int argc, char **argv)
         dst->linesize[2] = dst->width / 2;
         if (!dst->data[0] || !dst->data[1] || !dst->data[2])
             goto end;
-        dst->formaton = av_pixformaton_from_pixfmt(AV_PIX_FMT_YUV420P);
+        dst->formaton    = av_pixformaton_from_pixfmt(AV_PIX_FMT_YUV420P);
     } else {
         dst->linesize[0] = dst->width * bpc;
         dst->data[0]     = av_malloc(dst->linesize[0] * dst->height);
         if (!dst->data[0])
             goto end;
         dst->formaton    = av_pixformaton_from_pixfmt(AV_PIX_FMT_RGB24);
+        dst->data[1]     = dst->data[2] = 0;
     }
     avsctx = avscale_alloc_context();
     if (!avsctx)
