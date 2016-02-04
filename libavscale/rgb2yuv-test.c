@@ -61,10 +61,10 @@ int main(int argc, char **argv)
         dst->height = (dst->height / 3 + 3) & ~3;
     }
     if (copy) {
-        dst->data[0] = av_malloc(dst->width * dst->height * 3);
+        dst->linesize[0] = dst->width * bpc;
+        dst->data[0] = av_malloc(dst->linesize[0] * dst->height);
         if (!dst->data[0])
             goto end;
-        dst->linesize[0] = dst->width * 3;
         dst->formaton    = av_pixformaton_from_pixfmt(AV_PIX_FMT_RGB24);
         dst->data[1]     = dst->data[2] = 0;
     } else {

@@ -33,7 +33,7 @@ static void rgb2yuv420(void *ctx,
                 dst[1][i >> 1] = av_clip_uint8(U + 128);
                 dst[2][i >> 1] = av_clip_uint8(V + 128);
             }
-#if 1
+#if 0
             av_log(ctx, AV_LOG_ERROR,
                    "0x%02X 0x%02X 0x%02X -> 0x%02X 0x%02X 0x%02X\n",
                    src[0][i], src[1][i],     src[2][i],

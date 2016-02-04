@@ -23,7 +23,7 @@ static void yuv2rgb(void *ctx,
             dst[0][3 * i + 0] = av_clip_uint8(Y + (             74698 * V + 32768 >> 16));
             dst[0][3 * i + 1] = av_clip_uint8(Y + (-25861 * U - 38050 * V + 32768 >> 16));
             dst[0][3 * i + 2] = av_clip_uint8(Y + (133180 * U             + 32768 >> 16));
-#if 1
+#if 0
             av_log(ctx, AV_LOG_WARNING,
                    "0x%02X 0x%02X 0x%02X -> 0x%02X 0x%02X 0x%02X\n",
                    src[0][i],     src[1][i >> 1],    src[2][i >> 1],
@@ -31,8 +31,10 @@ static void yuv2rgb(void *ctx,
 #endif
         }
         src[0] += sstrides[0];
-        src[1] += sstrides[1] * (j & 1);
-        src[2] += sstrides[2] * (j & 1);
+        if (j & 1) {
+            src[1] += sstrides[1];
+            src[2] += sstrides[2];
+        }
         dst[0] += dstrides[0];
     }
 }
