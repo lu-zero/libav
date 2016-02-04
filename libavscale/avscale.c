@@ -31,9 +31,8 @@ AVScaleContext *avscale_alloc_context(void)
 static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
                               const char *name)
 {
-    int ret;
+    int i, ret;
     AVScaleFilterStage *s;
-    int i;
 
     s = av_mallocz(sizeof(*s));
     if (!s)
@@ -45,6 +44,28 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
     for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
         s->w[i] = ctx->cur_w >> ctx->cur_fmt->component_desc[i].h_sub;
         s->h[i] = ctx->cur_h >> ctx->cur_fmt->component_desc[i].v_sub;
+    }
+
+    /* normally you're building chain like this:
+     *   input =/-> [kernel] => [kernel] => [kernel] =/-> output
+     * where => means planar data and =/-> means planar or packed data
+     * so when you insert second or any following kernel you should allocate
+     * temporary planar buffers for the previous kernel to output results to
+     * all intermediate processing is done in planar form after all
+     * (because I say so). */
+    if (*stage) {
+        for (i = 0; i < ctx->dst_fmt->nb_components; i++) {
+            int w = AV_CEIL_RSHIFT(ctx->dst_w,
+                                   ctx->cur_fmt->component_desc[i].h_sub);
+            int h = AV_CEIL_RSHIFT(ctx->dst_h,
+                                   ctx->cur_fmt->component_desc[i].v_sub);
+            int dstride = (w + 31) & ~31;
+
+            (*stage)->dst[i] = av_mallocz(h * dstride);
+            if (!(*stage)->dst[i])
+                return AVERROR(ENOMEM);
+            (*stage)->dst_stride[i] = dstride;
+        }
     }
 
     av_log(ctx, AV_LOG_WARNING, "kernel %s\n", name);
@@ -249,6 +270,7 @@ void avscale_free(AVScaleContext **pctx)
 {
     AVScaleContext *ctx;
     AVScaleFilterStage *s, *next;
+    int i;
 
     ctx = *pctx;
     if (!ctx)
@@ -257,6 +279,9 @@ void avscale_free(AVScaleContext **pctx)
     s = ctx->head;
 
     while (s) {
+        for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
+            av_freep(&s->dst[i]);
+        }
         next = s->next;
         if (s->deinit)
             s->deinit(s);

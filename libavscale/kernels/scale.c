@@ -36,8 +36,6 @@ static void scale_deinit(AVScaleFilterStage *stage)
     int i;
 
     for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
-        av_freep(&stage->dst[i]);
-        stage->dst_stride[i] = 0;
         av_freep(&stage->do_component_ctx[i]);
     }
 }
@@ -48,7 +46,7 @@ static int scale_kernel_init(AVScaleContext *ctx,
                              AVDictionary *opts)
 {
     ScaleContext *sc;
-    int i, n, dstride;
+    int i, n;
 
     n = ctx->dst_fmt->nb_components;
     if (ctx->cur_fmt->component_desc[0].depth > 8) {
@@ -69,13 +67,6 @@ static int scale_kernel_init(AVScaleContext *ctx,
                                    ctx->cur_fmt->component_desc[i].h_sub);
         sc->dst_h = AV_CEIL_RSHIFT(ctx->dst_h,
                                    ctx->cur_fmt->component_desc[i].v_sub);
-
-        dstride = (sc->dst_w + 31) & ~31;
-
-        stage->dst[i] = av_mallocz(sc->dst_h * dstride);
-        if (!stage->dst[i])
-            return AVERROR(ENOMEM);
-        stage->dst_stride[i] = dstride;
     }
 
     ctx->cur_w = ctx->dst_w;

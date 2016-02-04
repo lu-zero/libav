@@ -38,11 +38,6 @@ static void rgbunpack(void *ctx_,
 
 static void rgbunpack_free(AVScaleFilterStage *stage)
 {
-    int i;
-    for (i = 0; i < 3; i++) {
-        av_freep(&stage->dst[i]);
-        stage->dst_stride[i] = 0;
-    }
     av_freep(&stage->do_common_ctx);
 }
 
@@ -52,8 +47,6 @@ static int rgbunpack_kernel_init(AVScaleContext *ctx,
                                  AVDictionary *opts)
 {
     RGBUnpackContext *ruc;
-    int i;
-    int dstride = (ctx->cur_w + 31) & ~31;
 
     stage->do_common = rgbunpack;
     stage->deinit    = rgbunpack_free;
@@ -66,14 +59,6 @@ static int rgbunpack_kernel_init(AVScaleContext *ctx,
     ruc->goff = ctx->cur_fmt->component_desc[1].offset;
     ruc->boff = ctx->cur_fmt->component_desc[2].offset;
     ruc->step = ctx->cur_fmt->pixel_size;
-
-    //todo not allocate temp buffer for planar final output
-    for (i = 0; i < 3; i++) {
-        stage->dst[i] = av_mallocz(ctx->cur_h * dstride);
-        if (!stage->dst[i])
-            return AVERROR(ENOMEM);
-        stage->dst_stride[i] = dstride;
-    }
 
     return 0;
 }
