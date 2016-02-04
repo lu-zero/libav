@@ -110,11 +110,12 @@ int main(int argc, char **argv)
     ret = 0;
 
 end:
-    if (src)
-        av_freep(&src->data[0]);
-    if (dst)
-        for (i = 0; i < 3; i++)
+    for (i = 0; i < 3; i++) {
+        if (src)
+            av_freep(&src->data[i]);
+        if (dst)
             av_freep(&dst->data[i]);
+    }
     av_frame_free(&src);
     av_frame_free(&dst);
 
