@@ -183,7 +183,7 @@ typedef struct AVPixelFormaton {
 
     int nb_components;
 #define AV_PIX_FORMATON_COMPONENTS 5
-    AVPixelChromaton component_desc[AV_PIX_FORMATON_COMPONENTS];
+    AVPixelChromaton component[AV_PIX_FORMATON_COMPONENTS];
 } AVPixelFormaton;
 
 typedef struct AVPixelFormatonRef {

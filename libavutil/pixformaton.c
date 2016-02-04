@@ -134,7 +134,7 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
         pf->pixel_size = (desc->comp[0].depth * desc->nb_components + 7) >> 3;
 
     for (i = 0; i < pf->nb_components; i++) {
-        AVPixelChromaton *chromaton = &pf->component_desc[i];
+        AVPixelChromaton *chromaton = &pf->component[i];
         const AVComponentDescriptor *comp = &desc->comp[i];
 
         chromaton->plane     = comp->plane;

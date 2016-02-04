@@ -99,9 +99,9 @@ static int rgb2yuv_kernel_init(AVScaleContext *ctx,
                                AVScaleFilterStage *stage,
                                AVDictionary *opts)
 {
-    if (ctx->cur_fmt->component_desc[0].depth <= 8)
+    if (ctx->cur_fmt->component[0].depth <= 8)
         stage->do_common = rgb2yuv420;
-    else if (ctx->cur_fmt->component_desc[0].depth <= 16)
+    else if (ctx->cur_fmt->component[0].depth <= 16)
         stage->do_common = rgb10_to_yuv420;
     else
         return AVERROR(ENOSYS);

@@ -55,9 +55,9 @@ static int rgbunpack_kernel_init(AVScaleContext *ctx,
         return AVERROR(ENOMEM);
 
     ruc = stage->do_common_ctx;
-    ruc->roff = ctx->cur_fmt->component_desc[0].offset;
-    ruc->goff = ctx->cur_fmt->component_desc[1].offset;
-    ruc->boff = ctx->cur_fmt->component_desc[2].offset;
+    ruc->roff = ctx->cur_fmt->component[0].offset;
+    ruc->goff = ctx->cur_fmt->component[1].offset;
+    ruc->boff = ctx->cur_fmt->component[2].offset;
     ruc->step = ctx->cur_fmt->pixel_size;
 
     return 0;

@@ -101,7 +101,7 @@ static int rgbpack_kernel_init(AVScaleContext *ctx,
     RGBPackContext *rc;
     int i;
 
-    if (!ctx->dst_fmt->component_desc[0].next)
+    if (!ctx->dst_fmt->component[0].next)
         stage->do_common = rgbpack_fields;
     else
         stage->do_common = rgbpack24;
@@ -113,12 +113,12 @@ static int rgbpack_kernel_init(AVScaleContext *ctx,
 
     rc = stage->do_common_ctx;
     for (i = 0; i < 3; i++) {
-        rc->off[i]   = ctx->dst_fmt->component_desc[i].offset;
-        rc->shift[i] = ctx->dst_fmt->component_desc[i].shift;
+        rc->off[i]   = ctx->dst_fmt->component[i].offset;
+        rc->shift[i] = ctx->dst_fmt->component[i].shift;
     }
     rc->step  = ctx->dst_fmt->pixel_size;
     rc->be    = ctx->dst_fmt->flags & AV_PIX_FORMATON_FLAG_BE;
-    rc->inbpp = ctx->cur_fmt->component_desc[0].depth;
+    rc->inbpp = ctx->cur_fmt->component[0].depth;
 
     return 0;
 }

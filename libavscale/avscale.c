@@ -43,8 +43,8 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
         ctx->head = s;
 
     for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
-        s->w[i] = AV_CEIL_RSHIFT(ctx->cur_w, ctx->cur_fmt->component_desc[i].h_sub);
-        s->h[i] = AV_CEIL_RSHIFT(ctx->cur_h, ctx->cur_fmt->component_desc[i].v_sub);
+        s->w[i] = AV_CEIL_RSHIFT(ctx->cur_w, ctx->cur_fmt->component[i].h_sub);
+        s->h[i] = AV_CEIL_RSHIFT(ctx->cur_h, ctx->cur_fmt->component[i].v_sub);
     }
 
     /* normally you're building chain like this:
@@ -57,9 +57,9 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
     if (*stage) {
         for (i = 0; i < ctx->dst_fmt->nb_components; i++) {
             int w = AV_CEIL_RSHIFT(ctx->dst_w,
-                                   ctx->cur_fmt->component_desc[i].h_sub);
+                                   ctx->cur_fmt->component[i].h_sub);
             int h = AV_CEIL_RSHIFT(ctx->dst_h,
-                                   ctx->cur_fmt->component_desc[i].v_sub);
+                                   ctx->cur_fmt->component[i].v_sub);
             int dstride = (w + 31) & ~31;
 
             (*stage)->dst[i] = av_mallocz(h * dstride);
@@ -113,20 +113,20 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
     if (ctx->src_fmt->model == AVCOL_MODEL_RGB &&
         ctx->dst_fmt->model == AVCOL_MODEL_RGB) {
         /* RGB packed to planar */
-        if ( ctx->src_fmt->component_desc[0].packed &&
-            !ctx->dst_fmt->component_desc[0].packed) {
+        if ( ctx->src_fmt->component[0].packed &&
+            !ctx->dst_fmt->component[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
         /* Diffrent RGB format OR different sizes */
         } else if ((ctx->src_fmt->pixel_size != ctx->dst_fmt->pixel_size) ||
                    (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)) {
-            if (ctx->src_fmt->component_desc[0].packed)
+            if (ctx->src_fmt->component[0].packed)
                 if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                     return ret;
             if (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)
                 if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
                     return ret;
-            if (ctx->dst_fmt->component_desc[0].packed)
+            if (ctx->dst_fmt->component[0].packed)
                 if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
                     return ret;
         /* Same format */
@@ -169,7 +169,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
         }
         if ((ret = prepare_next_stage(ctx, &stage, "yuv2rgb")) < 0)
             return ret;
-        if (!ctx->dst_fmt->component_desc[0].packed) {
+        if (!ctx->dst_fmt->component[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 return ret;
         }
@@ -186,10 +186,10 @@ uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id)
 { // currently a simple hack - it has to be extended for e.g. NV12
     if (component_id >= src->formaton->pf->nb_components)
         return 0;
-    if (!src->formaton->pf->component_desc[component_id].packed)
-        return src->data[src->formaton->pf->component_desc[component_id].plane];
+    if (!src->formaton->pf->component[component_id].packed)
+        return src->data[src->formaton->pf->component[component_id].plane];
     else
-        return src->data[0] + src->formaton->pf->component_desc[component_id].offset;
+        return src->data[0] + src->formaton->pf->component[component_id].offset;
 }
 
 int avscale_get_component_stride(AVFrame *src, int component_id)

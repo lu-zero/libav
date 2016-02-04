@@ -49,7 +49,7 @@ static int scale_kernel_init(AVScaleContext *ctx,
     int i, n;
 
     n = ctx->dst_fmt->nb_components;
-    if (ctx->cur_fmt->component_desc[0].depth > 8) {
+    if (ctx->cur_fmt->component[0].depth > 8) {
         av_log(ctx, AV_LOG_ERROR, "scale returning %d\n", AVERROR(ENOSYS));
         return AVERROR(ENOSYS);
     }
@@ -64,9 +64,9 @@ static int scale_kernel_init(AVScaleContext *ctx,
         if (!sc)
             return AVERROR(ENOMEM);
         sc->dst_w = AV_CEIL_RSHIFT(ctx->dst_w,
-                                   ctx->cur_fmt->component_desc[i].h_sub);
+                                   ctx->cur_fmt->component[i].h_sub);
         sc->dst_h = AV_CEIL_RSHIFT(ctx->dst_h,
-                                   ctx->cur_fmt->component_desc[i].v_sub);
+                                   ctx->cur_fmt->component[i].v_sub);
     }
 
     ctx->cur_w = ctx->dst_w;

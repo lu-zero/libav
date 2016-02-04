@@ -42,7 +42,7 @@ static int yuv2rgb_kernel_init(AVScaleContext *ctx,
                                AVScaleFilterStage *stage,
                                AVDictionary *opts)
 {
-    if (ctx->cur_fmt->component_desc[0].depth <= 8)
+    if (ctx->cur_fmt->component[0].depth <= 8)
         stage->do_common = yuv2rgb;
     else
         return AVERROR(ENOSYS);

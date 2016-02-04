@@ -19,7 +19,7 @@ static int murder_kernel_init(AVScaleContext *ctx,
 {
     int i, n;
     n = ctx->cur_fmt->nb_components;
-    if (ctx->cur_fmt->component_desc[0].packed)
+    if (ctx->cur_fmt->component[0].packed)
         n = 1;
     for (i = 0; i < n; i++)
         stage->do_component[i] = component_murder;
