@@ -36,7 +36,8 @@
 #include "libavutil/mathematics.h"
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
-#include "libswscale/swscale.h"
+
+#include "libavscale/avscale.h"
 
 static const char *const var_names[] = {
     "PI",
@@ -70,7 +71,7 @@ enum var_name {
 
 typedef struct ScaleContext {
     const AVClass *class;
-    struct SwsContext *sws;     ///< software scaler context
+    struct AVScaleContext *avs;     ///< software scaler context
 
     /**
      * New dimensions. Special values are:
@@ -94,15 +95,10 @@ static av_cold int init(AVFilterContext *ctx)
 {
     ScaleContext *scale = ctx->priv;
 
-    if (scale->flags_str) {
-        const AVClass *class = sws_get_class();
-        const AVOption    *o = av_opt_find(&class, "sws_flags", NULL, 0,
-                                           AV_OPT_SEARCH_FAKE_OBJ);
-        int ret = av_opt_eval_flags(&class, o, scale->flags_str, &scale->flags);
-
-        if (ret < 0)
-            return ret;
-    }
+// TODO: setup stuff if needed.
+    scale->avs = avscale_alloc_context();
+    if (!scale->avs)
+        return AVERROR(ENOMEM);
 
     return 0;
 }
@@ -110,13 +106,13 @@ static av_cold int init(AVFilterContext *ctx)
 static av_cold void uninit(AVFilterContext *ctx)
 {
     ScaleContext *scale = ctx->priv;
-    sws_freeContext(scale->sws);
-    scale->sws = NULL;
+    avscale_free(&scale->avs);
 }
 
 static int query_formats(AVFilterContext *ctx)
 {
     AVFilterFormats *formats;
+    AVPixelFormatonRef *fmt;
     enum AVPixelFormat pix_fmt;
     int ret;
 
@@ -125,12 +121,14 @@ static int query_formats(AVFilterContext *ctx)
         formats = NULL;
         while ((desc = av_pix_fmt_desc_next(desc))) {
             pix_fmt = av_pix_fmt_desc_get_id(desc);
-            if ((sws_isSupportedInput(pix_fmt) ||
-                 sws_isSupportedEndiannessConversion(pix_fmt))
-                && (ret = ff_add_format(&formats, pix_fmt)) < 0) {
+            fmt     = av_pixformaton_from_pixfmt(pix_fmt);
+            if (avscale_supported_input(fmt->pf) &&
+                (ret = ff_add_format(&formats, pix_fmt)) < 0) {
+                av_pixformaton_unref(&fmt);
                 ff_formats_unref(&formats);
                 return ret;
             }
+            av_pixformaton_unref(&fmt);
         }
         ff_formats_ref(formats, &ctx->inputs[0]->out_formats);
     }
@@ -139,12 +137,14 @@ static int query_formats(AVFilterContext *ctx)
         formats = NULL;
         while ((desc = av_pix_fmt_desc_next(desc))) {
             pix_fmt = av_pix_fmt_desc_get_id(desc);
-            if ((sws_isSupportedOutput(pix_fmt) ||
-                 sws_isSupportedEndiannessConversion(pix_fmt))
-                && (ret = ff_add_format(&formats, pix_fmt)) < 0) {
+            fmt = av_pixformaton_from_pixfmt(pix_fmt);
+            if (avscale_supported_output(fmt->pf) &&
+                (ret = ff_add_format(&formats, pix_fmt)) < 0) {
+                av_pixformaton_unref(&fmt);
                 ff_formats_unref(&formats);
                 return ret;
             }
+            av_pixformaton_unref(&fmt);
         }
         ff_formats_ref(formats, &ctx->outputs[0]->in_formats);
     }
@@ -231,18 +231,7 @@ static int config_props(AVFilterLink *outlink)
     scale->input_is_pal = desc->flags & AV_PIX_FMT_FLAG_PAL ||
                           desc->flags & AV_PIX_FMT_FLAG_PSEUDOPAL;
 
-    if (scale->sws)
-        sws_freeContext(scale->sws);
-    if (inlink->w == outlink->w && inlink->h == outlink->h &&
-        inlink->format == outlink->format)
-        scale->sws = NULL;
-    else {
-        scale->sws = sws_getContext(inlink ->w, inlink ->h, inlink ->format,
-                                    outlink->w, outlink->h, outlink->format,
-                                    scale->flags, NULL, NULL, scale->param);
-        if (!scale->sws)
-            return AVERROR(EINVAL);
-    }
+    // TODO: have a different configure method
 
 
     if (inlink->sample_aspect_ratio.num)
@@ -266,8 +255,9 @@ static int filter_frame(AVFilterLink *link, AVFrame *in)
     AVFilterLink *outlink = link->dst->outputs[0];
     AVFrame *out;
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(link->format);
+    int ret;
 
-    if (!scale->sws)
+    if (!scale->avs)
         return ff_filter_frame(outlink, in);
 
     scale->hsub = desc->log2_chroma_w;
@@ -288,8 +278,7 @@ static int filter_frame(AVFilterLink *link, AVFrame *in)
               (int64_t)in->sample_aspect_ratio.den * outlink->w * link->h,
               INT_MAX);
 
-    sws_scale(scale->sws, in->data, in->linesize, 0, in->height,
-              out->data, out->linesize);
+    ret = avscale_process_frame(scale->avs, out, in);
 
     av_frame_free(&in);
     return ff_filter_frame(outlink, out);
@@ -301,8 +290,6 @@ static const AVOption options[] = {
     { "w",     "Output video width",          OFFSET(w_expr),    AV_OPT_TYPE_STRING, { .str = "iw" },       .flags = FLAGS },
     { "h",     "Output video height",         OFFSET(h_expr),    AV_OPT_TYPE_STRING, { .str = "ih" },       .flags = FLAGS },
     { "flags", "Flags to pass to libswscale", OFFSET(flags_str), AV_OPT_TYPE_STRING, { .str = "bilinear" }, .flags = FLAGS },
-    { "param0", "Scaler param 0",             OFFSET(param[0]),  AV_OPT_TYPE_DOUBLE, { .dbl = SWS_PARAM_DEFAULT  }, INT_MIN, INT_MAX, FLAGS },
-    { "param1", "Scaler param 1",             OFFSET(param[1]),  AV_OPT_TYPE_DOUBLE, { .dbl = SWS_PARAM_DEFAULT  }, INT_MIN, INT_MAX, FLAGS },
     { NULL },
 };
 
