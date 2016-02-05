@@ -299,6 +299,6 @@ void avscale_free(AVScaleContext **pctx)
     }
     ctx->head = ctx->tail = 0;
 
-    *pctx = NULL;
+    av_freep(pctx);
 }
 

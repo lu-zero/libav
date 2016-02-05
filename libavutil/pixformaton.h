@@ -171,7 +171,7 @@ typedef struct AVPixelFormaton {
      */
     int nb_palette_entries;
 
-
+#if 0
     /**
      * Standard-specific model details
      */
@@ -180,6 +180,7 @@ typedef struct AVPixelFormaton {
     enum AVColorTransferCharacteristic transfer;
     enum AVColorSpace space;
     enum AVChromaLocation location;
+#endif
 
     int nb_components;
 #define AV_PIX_FORMATON_COMPONENTS 5

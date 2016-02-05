@@ -1,4 +1,4 @@
-#include <strings.h>
+#include <string.h>
 #include "../internal.h"
 
 static void component_murder(void *ctx,
