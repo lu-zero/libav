@@ -56,9 +56,9 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
      * (because I say so). */
     if (*stage) {
         for (i = 0; i < ctx->cur_fmt->nb_components; i++) {
-            int w = AV_CEIL_RSHIFT(ctx->dst_w,
+            int w = AV_CEIL_RSHIFT(ctx->cur_w,
                                    ctx->cur_fmt->component[i].h_sub);
-            int h = AV_CEIL_RSHIFT(ctx->dst_h,
+            int h = AV_CEIL_RSHIFT(ctx->cur_h,
                                    ctx->cur_fmt->component[i].v_sub);
             int dstride = (w + 31) & ~31;
 
