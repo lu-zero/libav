@@ -15,9 +15,11 @@ int main(int argc, char **argv)
     int ret = AVERROR(ENOMEM);
     int i;
     int input_yuv, output_yuv;
+    enum AVPixelFormat infmt = AV_PIX_FMT_NONE, outfmt = AV_PIX_FMT_NONE;
 
     if (argc < 3) {
-        printf("usage: %s infile.pnm outfile.{ppm,pgm}\n", argv[0]);
+        printf("usage: %s in.{ppm,pgm} out.{ppm,pgm} [outfmt] [outsize]\n",
+               argv[0]);
         return AVERROR(EINVAL);
     }
     in = fopen(argv[1], "rb");
@@ -41,28 +43,43 @@ int main(int argc, char **argv)
     av_frame_unref(src);
     av_frame_unref(dst);
 
+    infmt = input_yuv ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_RGB24;
+    if (argc > 3)
+        outfmt = av_get_pix_fmt(argv[3]);
+    if (outfmt == AV_PIX_FMT_NONE)
+        outfmt = output_yuv ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_RGB24;
+
     if (input_yuv) {
         fscanf(in, "P5\n%d %d\n255\n", &w, &h);
         h = h - h / 3;
-        src->format = AV_PIX_FMT_YUV420P;
     } else {
         fscanf(in, "P6\n%d %d\n255\n", &w, &h);
-        src->format = AV_PIX_FMT_RGB24;
     }
-    printf("converting %dx%d pic...\n", w, h);
 
+    printf("converting %dx%d pic... %s -> %s\n",
+           w, h, av_get_pix_fmt_name(infmt), av_get_pix_fmt_name(outfmt));
+
+    src->width  = w;
+    src->height = h;
+    src->format = infmt;
     ret = av_frame_get_buffer(src, 1);
     if (ret < 0)
         goto end;
 
     fread(src->data[0], src->linesize[0], h, in);
+    if (input_yuv){
+        for (i = 0; i < h / 2; i++) {
+            fread(src->data[1] + i * src->linesize[1], w / 2, 1, in);
+            fread(src->data[2] + i * src->linesize[2], w / 2, 1, in);
+        }
+    }
 
-    dst->width  = src->width;
-    dst->height = src->height;
-    if (output_yuv)
-        dst->format = AV_PIX_FMT_YUV420P;
-    else
-        dst->format = AV_PIX_FMT_RGB24;
+    if (argc > 4)
+        sscanf(argv[4], "%dx%d", &w, &h);
+
+    dst->width  = w;
+    dst->height = h;
+    dst->format = outfmt;
     ret = av_frame_get_buffer(dst, 1);
     if (ret < 0)
         goto end;
