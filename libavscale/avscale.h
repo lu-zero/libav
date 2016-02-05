@@ -21,7 +21,7 @@
 #define AVSCALE_AVSCALE_H
 
 #include "libavutil/frame.h"
-#include "libavutil/pixdesc.h"
+#include "libavutil/pixformaton.h"
 
 #include "version.h"
 
@@ -88,9 +88,23 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst);
  *                  with avscale_alloc_context()
  * @param dst       The destination frame
  * @param src       The source frame
- * @return          0 on successo or AVERROR
+ * @return          0 on success or AVERROR
  */
 int avscale_process_frame(AVScaleContext *c, AVFrame *dst, AVFrame *src);
+
+/**
+ * Check if the input formaton is valid
+ *
+ * @return 0 if not valid, > 0 if valid
+ */
+int avscale_supported_input(AVPixelFormaton *fmt);
+
+/**
+ * Check if the output formaton is valid
+ *
+ * @return 0 if not valid, > 0 if valid
+ */
+int avscale_supported_output(AVPixelFormaton *fmt);
 
 /**
  * Return the LIBAVSCALE_VERSION_INT constant.

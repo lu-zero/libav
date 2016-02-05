@@ -84,6 +84,30 @@ err:
     return ret;
 }
 
+int avscale_supported_input(AVPixelFormaton *fmt)
+{
+
+    if (fmt->model != AVCOL_MODEL_RGB &&
+        fmt->model != AVCOL_MODEL_YUV ||
+        fmt->pixel_size > 16) {
+        return 0;
+    }
+
+    return 1;
+}
+
+int avscale_supported_output(AVPixelFormaton *fmt)
+{
+
+    if (fmt->model != AVCOL_MODEL_RGB &&
+        fmt->model != AVCOL_MODEL_YUV ||
+        fmt->pixel_size > 16) {
+        return 0;
+    }
+
+    return 1;
+}
+
 // FIXME: proof of a concept
 int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
 {
