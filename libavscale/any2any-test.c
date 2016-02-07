@@ -18,7 +18,8 @@ int main(int argc, char **argv)
     enum AVPixelFormat infmt = AV_PIX_FMT_NONE, outfmt = AV_PIX_FMT_NONE;
 
     if (argc < 3) {
-        printf("usage: %s in.{ppm,pgm} out.{ppm,pgm} [outfmt] [outsize]\n",
+        printf("usage: %s in.{ppm,pgm} out.{ppm,pgm} "
+               "[outfmt] [outsize] [infmt]\n",
                argv[0]);
         return AVERROR(EINVAL);
     }
@@ -48,6 +49,10 @@ int main(int argc, char **argv)
         outfmt = av_get_pix_fmt(argv[3]);
     if (outfmt == AV_PIX_FMT_NONE)
         outfmt = output_yuv ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_RGB24;
+    if (argc > 5)
+        infmt = av_get_pix_fmt(argv[5]);
+    if (infmt == AV_PIX_FMT_NONE)
+        infmt = input_yuv ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_RGB24;
 
     if (input_yuv) {
         fscanf(in, "P5\n%d %d\n255\n", &w, &h);
@@ -74,8 +79,13 @@ int main(int argc, char **argv)
         }
     }
 
-    if (argc > 4)
+    if (argc > 4) {
         sscanf(argv[4], "%dx%d", &w, &h);
+        if (!w || !h) {
+            w = src->width;
+            h = src->height;
+        }
+    }
 
     dst->width  = w;
     dst->height = h;
