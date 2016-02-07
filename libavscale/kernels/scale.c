@@ -50,7 +50,11 @@ static int scale_kernel_init(AVScaleContext *ctx,
 
     n = ctx->dst_fmt->nb_components;
     if (ctx->cur_fmt->component[0].depth > 8) {
-        av_log(ctx, AV_LOG_ERROR, "scale returning %d\n", AVERROR(ENOSYS));
+        av_log(ctx, AV_LOG_ERROR, "scale bpp > 8 %d\n", AVERROR(ENOSYS));
+        return AVERROR(ENOSYS);
+    }
+    if (ctx->cur_fmt->nb_components == 4) {
+        av_log(ctx, AV_LOG_ERROR, "scale alpha %d\n", AVERROR(ENOSYS));
         return AVERROR(ENOSYS);
     }
 
