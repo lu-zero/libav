@@ -61,12 +61,12 @@ static void rgbpack_fields(void *ctx_,
     }
 }
 
-static void rgbpack24(void *ctx_,
-                      uint8_t *src[AVSCALE_MAX_COMPONENTS],
-                      int sstrides[AVSCALE_MAX_COMPONENTS],
-                      uint8_t *dst[AVSCALE_MAX_COMPONENTS],
-                      int dstrides[AVSCALE_MAX_COMPONENTS],
-                      int w, int h)
+static void rgbpack(void *ctx_,
+                    uint8_t *src[AVSCALE_MAX_COMPONENTS],
+                    int sstrides[AVSCALE_MAX_COMPONENTS],
+                    uint8_t *dst[AVSCALE_MAX_COMPONENTS],
+                    int dstrides[AVSCALE_MAX_COMPONENTS],
+                    int w, int h)
 {
     RGBPackContext *ctx = ctx_;
     uint8_t *rgb[3], *dest;
@@ -123,7 +123,7 @@ static int rgbpack_kernel_init(AVScaleContext *ctx,
     if (!ctx->dst_fmt->component[0].next)
         stage->do_common = rgbpack_fields;
     else
-        stage->do_common = rgbpack24;
+        stage->do_common = rgbpack;
 
     stage->deinit    = rgbpck_free;
     stage->do_common_ctx = av_malloc(sizeof(RGBPackContext));
