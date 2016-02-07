@@ -13,6 +13,15 @@ echo "rgb2yuv"
 echo "rgb2yuv + scale"
 ./libavscale/any2any-test ../libavscale/sample.ppm scaled_rgb2yuv.pgm none 100x100
 
+
+# rgb2rgba
+echo "rgb2rgba"
+./libavscale/any2any-test ../libavscale/sample.ppm rgba.ppm rgba
+
+echo "rgb2bgra"
+./libavscale/any2any-test ../libavscale/sample.ppm bgra.ppm bgra
+
+
 # yuv2rgb
 echo "murder (yuv)"
 ./libavscale/any2any-test rgb2yuv.pgm murder.pgm

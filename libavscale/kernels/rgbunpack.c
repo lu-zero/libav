@@ -3,8 +3,9 @@
 #include "libavutil/mem.h"
 
 typedef struct RGBUnpackContext {
-    int roff, goff, boff;
+    int roff, goff, boff, aoff;
     int step;
+    int nb_comp;
 } RGBUnpackContext;
 
 static void rgbunpack(void *ctx_,
@@ -15,22 +16,23 @@ static void rgbunpack(void *ctx_,
                       int w, int h)
 {
     RGBUnpackContext *ctx = ctx_;
-    uint8_t *rgb[3];
+    uint8_t *rgb[4];
     int i, j, c;
 
     rgb[0] = src[0] + ctx->roff;
     rgb[1] = src[0] + ctx->goff;
     rgb[2] = src[0] + ctx->boff;
+    rgb[3] = src[0] + ctx->aoff;
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
-            for (c = 0; c < 3; c++) {
+            for (c = 0; c < ctx->nb_comp; c++) {
                 dst[c][i] = rgb[c][0];
-                rgb[c] += ctx->step;
+                rgb[c] += ctx->step - ctx->roff;
             }
         }
-        for (c = 0; c < 3; c++) {
-            rgb[c] += sstrides[0] - w * ctx->step;
+        for (c = 0; c < ctx->nb_comp; c++) {
+            rgb[c] += sstrides[0] - w * ctx->step; // - ctx->roff?
             dst[c] += dstrides[c];
         }
     }
@@ -58,7 +60,9 @@ static int rgbunpack_kernel_init(AVScaleContext *ctx,
     ruc->roff = ctx->cur_fmt->component[0].offset;
     ruc->goff = ctx->cur_fmt->component[1].offset;
     ruc->boff = ctx->cur_fmt->component[2].offset;
+    ruc->aoff = ctx->cur_fmt->component[3].offset;
     ruc->step = ctx->cur_fmt->pixel_size;
+    ruc->nb_comp = ctx->cur_fmt->nb_components;
 
     return 0;
 }
