@@ -75,7 +75,7 @@ static void rgbpack(void *ctx_,
     rgb[0] = src[0];
     rgb[1] = src[1];
     rgb[2] = src[2];
-    dest   = dst[0];
+    dest   = dst[0] - ctx->off[0];
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
@@ -90,7 +90,7 @@ static void rgbpack(void *ctx_,
     }
 
     if (ctx->outalpha) {
-        dest = dst[0];
+        dest = dst[0] - ctx->off[0];
         for (j = 0; j < h; j++) {
             for (i = 0; i < w; i++) {
                 int alpha;
@@ -131,7 +131,7 @@ static int rgbpack_kernel_init(AVScaleContext *ctx,
         return AVERROR(ENOMEM);
 
     rc = stage->do_common_ctx;
-    for (i = 0; i < ctx->dst_fmt->nb_components; i++) {
+    for (i = 0; i < 4; i++) {
         rc->off[i]   = ctx->dst_fmt->component[i].offset;
         rc->shift[i] = ctx->dst_fmt->component[i].shift;
     }

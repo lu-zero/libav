@@ -66,6 +66,9 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
             if (!(*stage)->dst[i])
                 return AVERROR(ENOMEM);
             (*stage)->dst_stride[i] = dstride;
+            av_log(NULL, AV_LOG_INFO | AV_LOG_C(134),
+                   "stage %s: allocated %d bytes for dst[%d]\n",
+                   name, h * dstride, i);
         }
     }
 
@@ -145,9 +148,10 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
             !ctx->dst_fmt->component[0].packed) {
             if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                 goto end;
-        /* Diffrent RGB format OR different sizes */
+        /* Diffrent RGB format OR different sizes OR different order */
         } else if ((ctx->src_fmt->pixel_size != ctx->dst_fmt->pixel_size) ||
-                   (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h)) {
+                   (ctx->cur_w != ctx->dst_w || ctx->cur_h != ctx->dst_h) ||
+                   (ctx->src_fmt->component[0].offset != ctx->dst_fmt->component[0].offset)) {
             if (ctx->src_fmt->component[0].packed)
                 if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
                     goto end;
