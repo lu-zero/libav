@@ -6,6 +6,7 @@ typedef struct RGBUnpackContext {
     int roff, goff, boff, aoff;
     int step;
     int nb_comp;
+    int needs_alpha;
 } RGBUnpackContext;
 
 static void rgbunpack(void *ctx_,
@@ -36,6 +37,10 @@ static void rgbunpack(void *ctx_,
             dst[c] += dstrides[c];
         }
     }
+
+    // create alpha if source formaton doesn't have it and dst needs it
+    if (ctx->needs_alpha)
+        memset(dst[3], 0xFF, dstrides[3] * h);
 }
 
 static void rgbunpack_free(AVScaleFilterStage *stage)
@@ -63,6 +68,8 @@ static int rgbunpack_kernel_init(AVScaleContext *ctx,
     ruc->aoff = ctx->cur_fmt->component[3].offset;
     ruc->step = ctx->cur_fmt->pixel_size;
     ruc->nb_comp = ctx->cur_fmt->nb_components;
+    ruc->needs_alpha = ctx->cur_fmt->nb_components != 4 &&
+                       ctx->dst_fmt->nb_components == 4;
 
     return 0;
 }

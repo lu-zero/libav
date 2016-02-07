@@ -55,7 +55,7 @@ static int prepare_next_stage(AVScaleContext *ctx, AVScaleFilterStage **stage,
      * all intermediate processing is done in planar form after all
      * (because I say so). */
     if (*stage) {
-        for (i = 0; i < ctx->cur_fmt->nb_components; i++) {
+        for (i = 0; i < ctx->cur_fmt->nb_components + (ctx->dst_fmt->nb_components == 4); i++) {
             int w = AV_CEIL_RSHIFT(ctx->cur_w,
                                    ctx->cur_fmt->component[i].h_sub);
             int h = AV_CEIL_RSHIFT(ctx->cur_h,
