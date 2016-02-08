@@ -10,7 +10,6 @@ typedef struct RGBPackContext {
     int step;
     int inbpp;
     int be;
-    int outalpha;
 } RGBPackContext;
 
 static void rgbpack_fields(void *ctx_,
@@ -87,18 +86,23 @@ static void rgbpack(void *ctx_,
             rgb[c] += sstrides[0];
         dest += dstrides[0] - w * ctx->step;
     }
+}
 
-    // if source formaton doesn't have alpha, it is created at unpack
-    if (ctx->outalpha) {
-        dest = dst[0] - ctx->off[0];
-        for (j = 0; j < h; j++) {
-            for (i = 0; i < w; i++) {
-                dest[ctx->off[3]] = (ctx->inbpp <= 8) ? src[3][i]
-                                                      : AV_RN16(src[3] + i * 2) >> (ctx->inbpp - 8);
-                dest += ctx->step;
-            }
-            dest += dstrides[3] - w * ctx->step;
+static void copy_alpha(void *ctx,
+                       uint8_t *src, int sstride,
+                       uint8_t *dst, int dstride,
+                       int w, int h)
+{
+    RGBPackContext *rpc = ctx;
+    uint8_t *dest = dst;
+    int i, j;
+
+    for (j = 0; j < h; j++) {
+        for (i = 0; i < w; i++) {
+            dest[i * rpc->step] = rpc->inbpp <= 8 ? src[i]
+                                                  : AV_RN16(src + i * 2) >> (rpc->inbpp - 8);
         }
+        dest += dstride;
     }
 }
 
@@ -133,7 +137,11 @@ static int rgbpack_kernel_init(AVScaleContext *ctx,
     rc->step  = ctx->dst_fmt->pixel_size;
     rc->be    = ctx->dst_fmt->flags & AV_PIX_FORMATON_FLAG_BE;
     rc->inbpp = ctx->cur_fmt->component[0].depth;
-    rc->outalpha = ctx->dst_fmt->nb_components == 4;
+
+    if (ctx->dst_fmt->nb_components == 4) {
+        stage->do_component_ctx[3] = stage->do_common_ctx;
+        stage->do_component[3] = copy_alpha;
+    }
 
     return 0;
 }
