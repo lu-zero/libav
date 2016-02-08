@@ -285,6 +285,11 @@ int avscale_process_frame(AVScaleContext *ctx, AVFrame *srcf, AVFrame *dstf)
             stage->do_common(stage->do_common_ctx,
                              src2, sstride, dst2, dstride,
                              stage->w[0], stage->h[0]);
+
+        /* copy pointers again since do_common might have changed them */
+        memcpy(src2, src, sizeof(src2));
+        memcpy(dst2, dst, sizeof(dst2));
+
         for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++)
             if (stage->do_component[i])
                 stage->do_component[i](stage->do_component_ctx[i],
