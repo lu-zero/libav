@@ -77,6 +77,8 @@ int main(int argc, char **argv)
             fread(src->data[1] + i * src->linesize[1], w / 2, 1, in);
             fread(src->data[2] + i * src->linesize[2], w / 2, 1, in);
         }
+        if (dst->data[3])
+            fread(src->data[3], src->linesize[3], h, in);
     }
 
     if (argc > 4) {
