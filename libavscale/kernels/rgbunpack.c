@@ -3,7 +3,7 @@
 #include "libavutil/mem.h"
 
 typedef struct RGBUnpackContext {
-    int roff, goff, boff, aoff;
+    int roff, goff, boff;
     int step;
     int nb_comp;
     int needs_alpha;
@@ -23,7 +23,6 @@ static void rgbunpack(void *ctx_,
     rgb[0] = src[0] + ctx->roff;
     rgb[1] = src[0] + ctx->goff;
     rgb[2] = src[0] + ctx->boff;
-    rgb[3] = src[0] + ctx->aoff;
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
@@ -37,10 +36,14 @@ static void rgbunpack(void *ctx_,
             dst[c] += dstrides[c];
         }
     }
+}
 
-    // create alpha if source formaton doesn't have it and dst needs it
-    if (ctx->needs_alpha)
-        memset(dst[3], 0xFF, dstrides[3] * h);
+static void alphagen(void *ctx,
+                     uint8_t *src, int sstride,
+                     uint8_t *dst, int dstride,
+                     int w, int h)
+{
+    memset(dst, 0xFF, dstride * h);
 }
 
 static void rgbunpack_free(AVScaleFilterStage *stage)
@@ -65,11 +68,12 @@ static int rgbunpack_kernel_init(AVScaleContext *ctx,
     ruc->roff = ctx->cur_fmt->component[0].offset;
     ruc->goff = ctx->cur_fmt->component[1].offset;
     ruc->boff = ctx->cur_fmt->component[2].offset;
-    ruc->aoff = ctx->cur_fmt->component[3].offset;
     ruc->step = ctx->cur_fmt->pixel_size;
     ruc->nb_comp = ctx->cur_fmt->nb_components;
-    ruc->needs_alpha = ctx->cur_fmt->nb_components != 4 &&
-                       ctx->dst_fmt->nb_components == 4;
+
+    // create alpha if source formaton doesn't have it and dst needs it
+    if (ctx->cur_fmt->nb_components == 3 && ctx->dst_fmt->nb_components == 4)
+        stage->do_component[ctx->dst_fmt->component[3].offset] = alphagen;
 
     return 0;
 }
