@@ -114,6 +114,8 @@ int main(int argc, char **argv)
             fwrite(dst->data[1] + i * dst->linesize[1], w / 2, 1, out);
             fwrite(dst->data[2] + i * dst->linesize[2], w / 2, 1, out);
         }
+        if (dst->data[3])
+            fwrite(dst->data[3], dst->linesize[3], h, out);
     } else {
         fprintf(out, "P6\n%d %d\n255\n", w, h);
         fwrite(dst->data[0], dst->linesize[0], h, out);

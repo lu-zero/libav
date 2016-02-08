@@ -94,6 +94,14 @@ static void rgb10_to_yuv420(void *ctx,
     }
 }
 
+static void copy_alpha(void *ctx,
+                       uint8_t *src, int sstride,
+                       uint8_t *dst, int dstride,
+                       int w, int h)
+{
+    memcpy(dst, src, dstride * h);
+}
+
 static int rgb2yuv_kernel_init(AVScaleContext *ctx,
                                const AVScaleKernel *kern,
                                AVScaleFilterStage *stage,
@@ -105,6 +113,9 @@ static int rgb2yuv_kernel_init(AVScaleContext *ctx,
         stage->do_common = rgb10_to_yuv420;
     else
         return AVERROR(ENOSYS);
+
+    if (ctx->dst_fmt->nb_components == 4)
+        stage->do_component[3] = copy_alpha;
 
     return 0;
 }
