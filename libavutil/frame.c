@@ -223,7 +223,6 @@ int av_frame_get_buffer(AVFrame *frame, int align)
 int av_frame_ref(AVFrame *dst, const AVFrame *src)
 {
     int i, ret = 0;
-    AVPixelFormatonRef *formaton_ref;
 
     dst->format         = src->format;
     dst->width          = src->width;
@@ -304,14 +303,15 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
     memcpy(dst->data,     src->data,     sizeof(src->data));
     memcpy(dst->linesize, src->linesize, sizeof(src->linesize));
 
-    //HACK
-    AVFrame *hack = (AVFrame *)src;
-    hack->formaton = av_pixformaton_from_pixfmt(src->format);
-
-    formaton_ref = av_pixformaton_ref(src->formaton);
-    if (!formaton_ref)
-        goto fail;
-    dst->formaton = formaton_ref;
+    //XXX
+    if (!src->formaton) {
+        dst->formaton = av_pixformaton_from_pixfmt(src->format);
+    } else {
+        AVPixelFormatonRef *ref = av_pixformaton_ref(src->formaton);
+        if (!ref)
+            goto fail;
+        dst->formaton = ref;
+    }
 
     return 0;
 
