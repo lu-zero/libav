@@ -49,8 +49,6 @@ static const char *const var_names[] = {
     "out_h",  "oh",
     "a", "dar",
     "sar",
-    "hsub",
-    "vsub",
     NULL
 };
 
@@ -82,7 +80,6 @@ typedef struct ScaleContext {
     unsigned int flags;         ///sws flags
     double param[2];            // sws params
 
-    int hsub, vsub;             ///< chroma subsampling
     int slice_y;                ///< top of current output slice
     int input_is_pal;           ///< set to 1 if the input format is paletted
 
@@ -254,14 +251,7 @@ static int filter_frame(AVFilterLink *link, AVFrame *in)
     ScaleContext *scale = link->dst->priv;
     AVFilterLink *outlink = link->dst->outputs[0];
     AVFrame *out;
-    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(link->format);
     int ret;
-
-    if (!scale->avs)
-        return ff_filter_frame(outlink, in);
-
-    scale->hsub = desc->log2_chroma_w;
-    scale->vsub = desc->log2_chroma_h;
 
     out = ff_get_video_buffer(outlink, outlink->w, outlink->h);
     if (!out) {
@@ -278,7 +268,7 @@ static int filter_frame(AVFilterLink *link, AVFrame *in)
               (int64_t)in->sample_aspect_ratio.den * outlink->w * link->h,
               INT_MAX);
 
-    ret = avscale_process_frame(scale->avs, out, in);
+    ret = avscale_process_frame(scale->avs, in, out);
 
     av_frame_free(&in);
     return ff_filter_frame(outlink, out);
