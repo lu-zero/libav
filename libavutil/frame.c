@@ -93,8 +93,11 @@ void av_frame_free(AVFrame **frame)
 static int get_video_buffer(AVFrame *frame, int align)
 {
     int ret, i;
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
+    if (!desc)
+        return AVERROR(EINVAL);
 
-    if (!frame->formaton && frame->format != AV_PIX_FMT_NONE) {
+    if (!frame->formaton) {
         frame->formaton = av_pixformaton_from_pixfmt(frame->format);
         if (!frame->formaton)
             return AVERROR(EINVAL);
@@ -128,8 +131,8 @@ static int get_video_buffer(AVFrame *frame, int align)
         frame->data[i] = frame->buf[i]->data;
     }
 
-    if (frame->formaton->pf->flags & AV_PIX_FMT_FLAG_PAL ||
-        frame->formaton->pf->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
+    if (desc->flags & AV_PIX_FMT_FLAG_PAL ||
+        desc->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
         int size;
 
         // XXX Compatibility until the palette_entries information is
@@ -220,6 +223,7 @@ int av_frame_get_buffer(AVFrame *frame, int align)
 int av_frame_ref(AVFrame *dst, const AVFrame *src)
 {
     int i, ret = 0;
+    AVPixelFormatonRef *formaton_ref;
 
     dst->format         = src->format;
     dst->width          = src->width;
@@ -299,6 +303,15 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
 
     memcpy(dst->data,     src->data,     sizeof(src->data));
     memcpy(dst->linesize, src->linesize, sizeof(src->linesize));
+
+    //HACK
+    AVFrame *hack = (AVFrame *)src;
+    hack->formaton = av_pixformaton_from_pixfmt(src->format);
+
+    formaton_ref = av_pixformaton_ref(src->formaton);
+    if (!formaton_ref)
+        goto fail;
+    dst->formaton = formaton_ref;
 
     return 0;
 
