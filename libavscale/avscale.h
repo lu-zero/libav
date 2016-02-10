@@ -73,7 +73,7 @@ void avscale_free(AVScaleContext **ctx);
  * @param src The source frame
  * @param dst The destination frame
  */
-int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst);
+int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src);
 
 /**
  * Scale the image provided by an AVFrame in src and put the result
@@ -90,7 +90,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst);
  * @param src       The source frame
  * @return          0 on success or AVERROR
  */
-int avscale_process_frame(AVScaleContext *c, AVFrame *dst, AVFrame *src);
+int avscale_process_frame(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src);
 
 /**
  * Check if the input formaton is valid

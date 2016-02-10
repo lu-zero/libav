@@ -78,8 +78,8 @@ int avscale_apply_kernel(AVScaleContext *ctx,
                          const char *name,
                          AVScaleFilterStage *stage);
 
-uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id);
-int avscale_get_component_stride(AVFrame *src, int component_id);
+uint8_t *avscale_get_component_ptr(const AVFrame *src, int component_id);
+int avscale_get_component_stride(const AVFrame *src, int component_id);
 
 
 #endif /* AVSCALE_INTERNAL_H */

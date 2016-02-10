@@ -112,7 +112,7 @@ int avscale_supported_output(AVPixelFormaton *fmt)
 }
 
 // FIXME: proof of a concept
-int avscale_build_chain(AVScaleContext *ctx, AVFrame *src, AVFrame *dst)
+int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
 {
     AVScaleFilterStage *stage = 0;
     int ret = 0;
@@ -218,7 +218,7 @@ end:
     return ret;
 }
 
-uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id)
+uint8_t *avscale_get_component_ptr(const AVFrame *src, int component_id)
 { // currently a simple hack - it has to be extended for e.g. NV12
     if (component_id >= src->formaton->pf->nb_components)
         return 0;
@@ -228,7 +228,7 @@ uint8_t *avscale_get_component_ptr(AVFrame *src, int component_id)
         return src->data[0] + src->formaton->pf->component[component_id].offset;
 }
 
-int avscale_get_component_stride(AVFrame *src, int component_id)
+int avscale_get_component_stride(const AVFrame *src, int component_id)
 {
     if (src->linesize[component_id])
         return src->linesize[component_id];
@@ -236,7 +236,8 @@ int avscale_get_component_stride(AVFrame *src, int component_id)
         return src->linesize[0];
 }
 
-int avscale_process_frame(AVScaleContext *ctx, AVFrame *srcf, AVFrame *dstf)
+int avscale_process_frame(AVScaleContext *ctx,
+                          AVFrame *dstf, const AVFrame *srcf)
 {
     int ret;
     const AVScaleFilterStage *stage;
@@ -251,7 +252,7 @@ int avscale_process_frame(AVScaleContext *ctx, AVFrame *srcf, AVFrame *dstf)
     uint8_t *dst2[AVSCALE_MAX_COMPONENTS];
 
     if (!ctx->head) {
-        if ((ret = avscale_build_chain(ctx, srcf, dstf)) < 0)
+        if ((ret = avscale_build_chain(ctx, dstf, srcf)) < 0)
             return ret;
         av_log(ctx, AV_LOG_INFO, "build chain ret = %d\n", ret);
     }
