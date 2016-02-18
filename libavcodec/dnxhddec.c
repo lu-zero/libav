@@ -24,17 +24,19 @@
 
 #include "libavutil/imgutils.h"
 #include "libavutil/timer.h"
+
 #include "avcodec.h"
+#include "bitstream.h"
 #include "blockdsp.h"
-#include "get_bits.h"
 #include "dnxhddata.h"
 #include "idctdsp.h"
 #include "internal.h"
 #include "thread.h"
+#include "vlc.h"
 
 typedef struct DNXHDContext {
     AVCodecContext *avctx;
-    GetBitContext gb;
+    BitstreamContext bc;
     BlockDSPContext bdsp;
     int cid;                            ///< compression id
     unsigned int width, height;
@@ -230,7 +232,7 @@ static av_always_inline void dnxhd_decode_dct_block(DNXHDContext *ctx,
     int i, j, index1, index2, len;
     int level, component, sign;
     const uint8_t *weight_matrix;
-    OPEN_READER(bs, &ctx->gb);
+    BitstreamContext in_bc = ctx->bc;
 
     if (!ctx->is_444) {
         if (n & 2) {
@@ -249,37 +251,30 @@ static av_always_inline void dnxhd_decode_dct_block(DNXHDContext *ctx,
         }
     }
 
-    UPDATE_CACHE(bs, &ctx->gb);
-    GET_VLC(len, bs, &ctx->gb, ctx->dc_vlc.table, DNXHD_DC_VLC_BITS, 1);
+    len = bitstream_read_vlc(&in_bc, ctx->dc_vlc.table, DNXHD_DC_VLC_BITS, 1);
     if (len) {
-        level = GET_CACHE(bs, &ctx->gb);
-        LAST_SKIP_BITS(bs, &ctx->gb, len);
-        sign  = ~level >> 31;
-        level = (NEG_USR32(sign ^ level, len) ^ sign) - sign;
+        level = bitstream_read_xbits(&in_bc, len);
         ctx->last_dc[component] += level;
     }
     block[0] = ctx->last_dc[component];
 
     for (i = 1; ; i++) {
-        UPDATE_CACHE(bs, &ctx->gb);
-        GET_VLC(index1, bs, &ctx->gb, ctx->ac_vlc.table,
-                DNXHD_VLC_BITS, 2);
+        index1 = bitstream_read_vlc(&in_bc, ctx->ac_vlc.table,
+                                    DNXHD_VLC_BITS, 2);
         level = ctx->cid_table->ac_level[index1];
         if (!level) /* EOB */
             break;
 
-        sign = SHOW_SBITS(bs, &ctx->gb, 1);
-        SKIP_BITS(bs, &ctx->gb, 1);
+        sign = bitstream_read_signed(&in_bc, 1);
 
         if (ctx->cid_table->ac_index_flag[index1]) {
-            level += SHOW_UBITS(bs, &ctx->gb, index_bits) << 6;
-            SKIP_BITS(bs, &ctx->gb, index_bits);
+            level = level + (bitstream_read(&in_bc, index_bits) << 6);
         }
 
         if (ctx->cid_table->ac_run_flag[index1]) {
-            UPDATE_CACHE(bs, &ctx->gb);
-            GET_VLC(index2, bs, &ctx->gb, ctx->run_vlc.table,
-                    DNXHD_VLC_BITS, 2);
+            index2 = bitstream_read_vlc(&in_bc, ctx->run_vlc.table,
+                                        DNXHD_VLC_BITS, 2);
+
             i += ctx->cid_table->run[index2];
         }
 
@@ -296,8 +291,7 @@ static av_always_inline void dnxhd_decode_dct_block(DNXHDContext *ctx,
 
         block[j] = (level ^ sign) - sign;
     }
-
-    CLOSE_READER(bs, &ctx->gb);
+    ctx->bc = in_bc;
 }
 
 static void dnxhd_decode_dct_block_8(DNXHDContext *ctx, int16_t *block,
@@ -330,12 +324,12 @@ static int dnxhd_decode_macroblock(DNXHDContext *ctx, AVFrame *frame,
     int interlaced_mb = 0;
 
     if (ctx->mbaff) {
-        interlaced_mb = get_bits1(&ctx->gb);
-        qscale = get_bits(&ctx->gb, 10);
+        interlaced_mb = bitstream_read_bit(&ctx->bc);
+        qscale = bitstream_read(&ctx->bc, 10);
     } else {
-        qscale = get_bits(&ctx->gb, 11);
+        qscale = bitstream_read(&ctx->bc, 11);
     }
-    skip_bits1(&ctx->gb);
+    bitstream_skip(&ctx->bc, 1);
 
     for (i = 0; i < 8; i++) {
         ctx->bdsp.clear_block(ctx->blocks[i]);
@@ -412,7 +406,7 @@ static int dnxhd_decode_macroblocks(DNXHDContext *ctx, AVFrame *frame,
         ctx->last_dc[0] =
         ctx->last_dc[1] =
         ctx->last_dc[2] = 1 << (ctx->bit_depth + 2); // for levels +2^(bitdepth-1)
-        init_get_bits(&ctx->gb, buf + ctx->mb_scan_index[y], (buf_size - ctx->mb_scan_index[y]) << 3);
+        bitstream_init8(&ctx->bc, buf + ctx->mb_scan_index[y], buf_size - ctx->mb_scan_index[y]);
         for (x = 0; x < ctx->mb_width; x++) {
             //START_TIMER;
             dnxhd_decode_macroblock(ctx, frame, x, y);
