@@ -32,7 +32,7 @@ typedef struct AVScaleContext AVScaleContext;
  *
  * This can be configured using AVOption and passed to avscale_init_context()
  * or to avscale_build_chain() to initialize it early,
- * or used as-is directly in avscale_process_frame().
+ * or used as-is directly in avscale_convert_frame().
  *
  * For filling see AVOptions, options.c.
  *
@@ -40,7 +40,7 @@ typedef struct AVScaleContext AVScaleContext;
  *
  * @see avscale_init_context
  * @see avscale_build_chain
- * @see avscale_process_frame
+ * @see avscale_convert_frame
  * @see avscale_free_context
  */
 AVScaleContext *avscale_alloc_context(void);
@@ -53,7 +53,7 @@ AVScaleContext *avscale_alloc_context(void);
  *
  * @return zero or positive value on success, a negative value on error
  * @see avscale_build_chain
- * @see avscale_process_frame
+ * @see avscale_convert_frame
  */
 int avscale_open(AVScaleContext *ctx);
 
@@ -90,7 +90,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src);
  * @param src       The source frame
  * @return          0 on success or AVERROR
  */
-int avscale_process_frame(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src);
+int avscale_convert_frame(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src);
 
 /**
  * Check if the input formaton is valid

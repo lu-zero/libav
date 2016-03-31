@@ -236,7 +236,7 @@ int avscale_get_component_stride(const AVFrame *src, int component_id)
         return src->linesize[0];
 }
 
-int avscale_process_frame(AVScaleContext *ctx,
+int avscale_convert_frame(AVScaleContext *ctx,
                           AVFrame *dstf, const AVFrame *srcf)
 {
     int ret;

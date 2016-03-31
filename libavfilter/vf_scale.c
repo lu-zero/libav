@@ -268,7 +268,7 @@ static int filter_frame(AVFilterLink *link, AVFrame *in)
               (int64_t)in->sample_aspect_ratio.den * outlink->w * link->h,
               INT_MAX);
 
-    ret = avscale_process_frame(scale->avs, out, in);
+    ret = avscale_convert_frame(scale->avs, out, in);
 
     av_frame_free(&in);
     return ff_filter_frame(outlink, out);
