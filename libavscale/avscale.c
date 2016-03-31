@@ -111,35 +111,7 @@ int avscale_supported_output(AVPixelFormaton *fmt)
     return 1;
 }
 
-// FIXME: proof of a concept
-int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
-{
-    AVScaleFilterStage *stage = 0;
-    int ret = 0;
-    AVPixelFormatonRef *src_fmt_ref = av_pixformaton_ref(src->formaton);
-    AVPixelFormatonRef *dst_fmt_ref = av_pixformaton_ref(dst->formaton);
-
-    if (!src_fmt_ref || !dst_fmt_ref) {
-        ret = AVERROR(ENOSYS);
-        goto end;
-    }
-
-    ctx->src_fmt = src_fmt_ref->pf;
-    ctx->dst_fmt = dst_fmt_ref->pf;
-    ctx->cur_w   = src->width;
-    ctx->cur_h   = src->height;
-    ctx->dst_w   = dst->width;
-    ctx->dst_h   = dst->height;
-    ctx->cur_fmt = ctx->src_fmt;
-
-    /*XXX proper generic approach would determine first
-     * 1) if you convert packed->planar, planar->packed or same->same
-     * 2) if it needs scaling
-     * 3) if it needs format conversion
-     * 4) if it needs color matrix
-     * 5) maybe gamma
-     * and only then build proper chain */
-
+#if 0
     /* Same color model (RGB) */
     if (ctx->src_fmt->model == AVCOL_MODEL_RGB &&
         ctx->dst_fmt->model == AVCOL_MODEL_RGB) {
@@ -209,9 +181,156 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
         goto end;
     }
 
+#endif
+
+
+/*
+ * Return 1 the src_fmt and dst_fmt are exactly the same.
+ * The conversion step is just av_frame_ref
+ */
+
+static int is_matching_all(AVScaleContext *ctx)
+{
+    const AVPixelFormaton *src = ctx->src_fmt;
+    const AVPixelFormaton *dst = ctx->dst_fmt;
+
+    size_t off = offsetof(AVPixelFormaton, model);
+    size_t len = sizeof(*src) - off;
+
+    return !memcmp(src + off, dst + off, len);
+}
+
+static int is_planar(const AVPixelFormaton *fmt)
+{
+    int i;
+
+    for (i = 0; i < fmt->nb_components; i++) {
+        if (fmt->component[i].packed)
+            return 0;
+    }
+
+    return 1;
+}
+
+/*
+ * Is the format one of the supported intermediates?
+ * Do we have a scale kernel we can use directly with this color model?
+ *
+ * TODO: update later with additional checks.
+ */
+static int is_compatible(const AVPixelFormaton *fmt)
+{
+    return fmt->model == AVCOL_MODEL_RGB ||
+           fmt->model == AVCOL_MODEL_YUV;
+}
+
+/*
+ * Moving from the input to the output does require
+ * to convert the format?
+ *
+ * - One of the format is not one of the supported intermediate
+ * - The color model is not matching
+ *
+ * TODO: Check the color matrix and gamma.
+ */
+static int need_conversion(AVScaleContext *ctx)
+{
+    const AVPixelFormaton *src = ctx->src_fmt;
+    const AVPixelFormaton *dst = ctx->dst_fmt;
+
+    return !is_compatible(src) ||
+           !is_compatible(dst) ||
+            src->model != dst->model;
+}
+
+static int is_matching_dimension(AVScaleContext *ctx)
+{
+    return ctx->cur_w == ctx->dst_w &&
+           ctx->cur_h == ctx->dst_h;
+}
+
+/*
+ * After scaling, is the amount of pixels larger?
+ */
+static int is_upscale(AVScaleContext *ctx)
+{
+    return ctx->cur_w * ctx->cur_h < ctx->dst_w * ctx->dst_h;
+}
+
+
+// TODO use a lookup table
+static int prepare_conversion_stage(AVScaleContext *ctx,
+                                    AVScaleFilterStage **stage)
+{
+    return AVERROR_PATCHWELCOME;
+
+}
+
+int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
+{
+    AVScaleFilterStage *stage = 0;
+    int ret = 0, need_scaling = 0, need_upscaling = 0;
+    AVPixelFormatonRef *src_fmt_ref = av_pixformaton_ref(src->formaton);
+    AVPixelFormatonRef *dst_fmt_ref = av_pixformaton_ref(dst->formaton);
+
+    if (!src_fmt_ref || !dst_fmt_ref) {
+        ret = AVERROR(ENOSYS);
+        goto fail;
+    }
+
+    ctx->src_fmt = src_fmt_ref->pf;
+    ctx->dst_fmt = dst_fmt_ref->pf;
+    ctx->cur_w   = src->width;
+    ctx->cur_h   = src->height;
+    ctx->dst_w   = dst->width;
+    ctx->dst_h   = dst->height;
+    ctx->cur_fmt = ctx->src_fmt;
+
+    if (is_matching_all(ctx)) {
+        if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
+            goto fail;
+        goto out;
+    }
+
+    if (!is_planar(ctx->src_fmt)) {
+        if ((ret = prepare_next_stage(ctx, &stage, "rgbunpack")) < 0)
+            goto fail;
+    }
+
+    need_scaling = !is_matching_dimension(ctx);
+    if (need_scaling)
+        need_upscaling = is_upscale(ctx);
+
+    if (!need_conversion(ctx)) {
+        if (need_scaling) {
+            if (need_upscaling) {
+                if ((ret = prepare_conversion_stage(ctx, &stage)) < 0)
+                    goto fail;
+                if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
+                    goto fail;
+            } else {
+                if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
+                    goto fail;
+                if ((ret = prepare_conversion_stage(ctx, &stage)) < 0)
+                    goto fail;
+            }
+        }
+    } else {
+        if (need_scaling) {
+            if ((ret = prepare_next_stage(ctx, &stage, "scale")) < 0)
+                    goto fail;
+        }
+    }
+
+    if (!is_planar(ctx->dst_fmt)) {
+        if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
+            goto fail;
+    }
+
+out:
     ctx->tail = stage;
 
-end:
+fail:
     av_pixformaton_unref(&src_fmt_ref);
     av_pixformaton_unref(&dst_fmt_ref);
 
