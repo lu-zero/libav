@@ -1818,6 +1818,15 @@ static const char * const chroma_location_names[] = {
     [AVCHROMA_LOC_BOTTOM] = "bottom",
 };
 
+static const char *color_model_names[AVCOL_MODEL_NB] = {
+    [AVCOL_MODEL_RGB] = "rgb",
+    [AVCOL_MODEL_XYZ] = "xyz",
+    [AVCOL_MODEL_YUV] = "yuv",
+    [AVCOL_MODEL_CYL] = "hsl",
+    [AVCOL_MODEL_CFA] = "bayer",
+    [AVCOL_MODEL_OPAQUE] = "opaque",
+};
+
 static enum AVPixelFormat get_pix_fmt_internal(const char *name)
 {
     enum AVPixelFormat pix_fmt;
@@ -2034,3 +2043,8 @@ const char *av_chroma_location_name(enum AVChromaLocation location)
         chroma_location_names[location] : NULL;
 }
 
+const char *av_color_model_name(enum AVColorModel model)
+{
+    return (unsigned) model < AVCOL_MODEL_NB ?
+        color_model_names[model] : NULL;
+}

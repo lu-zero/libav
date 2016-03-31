@@ -321,10 +321,12 @@ enum AVColorModel {
     AVCOL_MODEL_RGB,
     AVCOL_MODEL_XYZ,
     AVCOL_MODEL_YUV,
-/*
+
     AVCOL_MODEL_CYL, ///< HSL, HSV. HSI
     AVCOL_MODEL_CFA, ///< Bayer and other Field Arrays
-    AVCOL_MODEL_OPAQUE, ///< Opaque, implementation dependent */
+    AVCOL_MODEL_OPAQUE, ///< Opaque, implementation dependent
+
+    AVCOL_MODEL_NB,
 };
 
 

@@ -317,4 +317,9 @@ const char *av_color_space_name(enum AVColorSpace space);
  */
 const char *av_chroma_location_name(enum AVChromaLocation location);
 
+/**
+ * @return the name for provided color model or NULL if unknown.
+ */
+const char *av_color_model_name(enum AVColorModel model);
+
 #endif /* AVUTIL_PIXDESC_H */
