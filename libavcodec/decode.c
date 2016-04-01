@@ -587,6 +587,9 @@ int attribute_align_arg avcodec_receive_frame(AVCodecContext *avctx, AVFrame *fr
         }
     }
 
+    if (avctx->codec_type == AVMEDIA_TYPE_VIDEO && !frame->formaton)
+        frame->formaton = av_pixformaton_from_pixfmt(picture->format);
+
     avctx->frame_number++;
 
     return 0;
