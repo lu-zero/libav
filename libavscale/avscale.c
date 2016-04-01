@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "libavutil/avstring.h"
 #include "libavutil/common.h"
 #include "libavutil/mem.h"
 #include "internal.h"
@@ -262,8 +263,17 @@ static int is_upscale(AVScaleContext *ctx)
 static int prepare_conversion_stage(AVScaleContext *ctx,
                                     AVScaleFilterStage **stage)
 {
-    return AVERROR_PATCHWELCOME;
+    char buf[128] = "";
 
+    const char *src = av_color_model_name(ctx->src_fmt->model);
+    const char *dst = av_color_model_name(ctx->dst_fmt->model);
+
+    if (!src || !dst)
+        return AVERROR(EINVAL);
+
+    av_strlcatf(buf, sizeof(buf), "%s2%s", src, dst);
+
+    return prepare_next_stage(ctx, stage, buf);
 }
 
 int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
