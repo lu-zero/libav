@@ -276,7 +276,7 @@ static int prepare_conversion_stage(AVScaleContext *ctx,
     return prepare_next_stage(ctx, stage, buf);
 }
 
-int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
+int avscale_config(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
 {
     AVScaleFilterStage *stage = 0;
     int ret = 0, need_scaling = 0, need_upscaling = 0;
@@ -384,7 +384,7 @@ int avscale_convert_frame(AVScaleContext *ctx,
     uint8_t *dst2[AVSCALE_MAX_COMPONENTS];
 
     if (!ctx->head) {
-        if ((ret = avscale_build_chain(ctx, dstf, srcf)) < 0)
+        if ((ret = avscale_config(ctx, dstf, srcf)) < 0)
             return ret;
         av_log(ctx, AV_LOG_INFO, "build chain ret = %d\n", ret);
     }

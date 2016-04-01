@@ -31,7 +31,7 @@ typedef struct AVScaleContext AVScaleContext;
  * Allocate an empty AVScaleContext.
  *
  * This can be configured using AVOption and passed to avscale_init_context()
- * or to avscale_build_chain() to initialize it early,
+ * or to avscale_config() to initialize it early,
  * or used as-is directly in avscale_convert_frame().
  *
  * For filling see AVOptions, options.c.
@@ -39,7 +39,7 @@ typedef struct AVScaleContext AVScaleContext;
  * @return NULL on failure or a pointer to a newly allocated AVScaleContext
  *
  * @see avscale_init_context
- * @see avscale_build_chain
+ * @see avscale_config
  * @see avscale_convert_frame
  * @see avscale_free_context
  */
@@ -52,7 +52,7 @@ AVScaleContext *avscale_alloc_context(void);
  * @param ctx The context to initialize.
  *
  * @return zero or positive value on success, a negative value on error
- * @see avscale_build_chain
+ * @see avscale_config
  * @see avscale_convert_frame
  */
 int avscale_open(AVScaleContext *ctx);
@@ -73,7 +73,7 @@ void avscale_free(AVScaleContext **ctx);
  * @param src The source frame
  * @param dst The destination frame
  */
-int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src);
+int avscale_config(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src);
 
 /**
  * Scale the image provided by an AVFrame in src and put the result
