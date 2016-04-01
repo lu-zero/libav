@@ -100,7 +100,7 @@ int main(int argc, char **argv)
     if (!avsctx)
         goto end;
 
-    ret = avscale_convert_frame(avsctx, src, dst);
+    ret = avscale_convert_frame(avsctx, dst, src);
     if (ret < 0) {
         printf("Failed\n");
         goto end;
