@@ -25,19 +25,19 @@
 /**
  * The format is big-endian
  */
-#define AV_PIX_FORMATON_FLAG_BE     (1 << 0)
+#define AV_PIX_FORMATON_FLAG_BE      (1 << 0)
 /**
  * There is an alpha component
  *
  * @note: The alpha component is always the last component
  */
-#define AV_PIX_FORMATON_FLAG_ALPHA  (1 << 1)
+#define AV_PIX_FORMATON_FLAG_ALPHA   (1 << 1)
 /**
  * The format is palettized
  *
  * The components describe the palette.
  */
-#define AV_PIX_FORMATON_FLAG_PAL    (1 << 2)
+#define AV_PIX_FORMATON_FLAG_PALETTE (1 << 2)
 
 /**
  * Component description
@@ -171,7 +171,6 @@ typedef struct AVPixelFormaton {
      */
     int nb_palette_entries;
 
-#if 0
     /**
      * Standard-specific model details
      */
@@ -180,7 +179,6 @@ typedef struct AVPixelFormaton {
     enum AVColorTransferCharacteristic transfer;
     enum AVColorSpace space;
     enum AVChromaLocation location;
-#endif
 
     int nb_components;
 #define AV_PIX_FORMATON_COMPONENTS 5
