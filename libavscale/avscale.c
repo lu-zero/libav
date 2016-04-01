@@ -311,7 +311,7 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
     if (need_scaling)
         need_upscaling = is_upscale(ctx);
 
-    if (!need_conversion(ctx)) {
+    if (need_conversion(ctx)) {
         if (need_scaling) {
             if (need_upscaling) {
                 if ((ret = prepare_conversion_stage(ctx, &stage)) < 0)
@@ -324,6 +324,9 @@ int avscale_build_chain(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
                 if ((ret = prepare_conversion_stage(ctx, &stage)) < 0)
                     goto fail;
             }
+        } else {
+            if ((ret = prepare_conversion_stage(ctx, &stage)) < 0)
+                goto fail;
         }
     } else {
         if (need_scaling) {
