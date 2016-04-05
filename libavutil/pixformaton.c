@@ -46,7 +46,7 @@ AVPixelFormatonRef *av_pixformaton_alloc(void)
     if (!pref)
         goto fail;
 
-    pf = (AVPixelFormaton*)buf->data;
+    pf = (AVPixelFormaton *)buf->data;
 
     pref->pf  = pf;
     pref->ref = buf;
@@ -119,7 +119,6 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
     else
         pf->model = AVCOL_MODEL_YUV;
 
-#if 0
     if (av_strstart(desc->name, "yuvj", NULL))
         pf->range = AVCOL_RANGE_JPEG;
     else
@@ -129,7 +128,6 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
     pf->transfer  = AVCOL_TRC_UNSPECIFIED;
     pf->space     = AVCOL_SPC_UNSPECIFIED;
     pf->location  = AVCHROMA_LOC_UNSPECIFIED;
-#endif
 
     pf->nb_components = desc->nb_components;
 

@@ -24,8 +24,8 @@
 #include "frame.h"
 #include "imgutils.h"
 #include "mem.h"
-#include "samplefmt.h"
 #include "pixformaton.h"
+#include "samplefmt.h"
 
 static void get_frame_defaults(AVFrame *frame)
 {
@@ -92,8 +92,9 @@ void av_frame_free(AVFrame **frame)
 
 static int get_video_buffer(AVFrame *frame, int align)
 {
-    int ret, i;
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
+    int ret, i;
+
     if (!desc)
         return AVERROR(EINVAL);
 
@@ -135,8 +136,7 @@ static int get_video_buffer(AVFrame *frame, int align)
         desc->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
         int size;
 
-        // XXX Compatibility until the palette_entries information is
-        // stored somewhere.
+        // XXX Compatibility until the palette_entries information is stored somewhere.
         if (frame->formaton->pf->nb_palette_entries) {
             size = frame->formaton->pf->nb_palette_entries *
                    frame->formaton->pf->pixel_size;
@@ -303,15 +303,13 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
     memcpy(dst->data,     src->data,     sizeof(src->data));
     memcpy(dst->linesize, src->linesize, sizeof(src->linesize));
 
-    //XXX
-    if (!src->formaton) {
+    // XXX Compatibility to make sure dst has always a pixformaton ready
+    if (src->formaton)
+        dst->formaton = av_pixformaton_ref(src->formaton);
+    else
         dst->formaton = av_pixformaton_from_pixfmt(src->format);
-    } else {
-        AVPixelFormatonRef *ref = av_pixformaton_ref(src->formaton);
-        if (!ref)
-            goto fail;
-        dst->formaton = ref;
-    }
+    if (!dst->formaton)
+        goto fail;
 
     return 0;
 
