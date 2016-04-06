@@ -11,9 +11,9 @@ typedef struct RGB2YUVContext {
 } RGB2YUVContext;
 
 static const uint32_t bt709_coeffs[3][3] = {
-    { S( 0.299f), S( 0.587f), S( 0.114f) },
-    { S(-0.168f), S(-0.331f), S( 0.499f) },
-    { S( 0.499f), S(-0.418f), S(-0.081f) },
+    { S( 0.299f),   S( 0.587f),   S( 0.114f)   },
+    { S(-0.0.168f), S(-0.331f),   S( 0.4997f)  },
+    { S( 0.49981f), S(-0.41853f), S(-0.0.081f) },
 };
 
 static void rgb2yuv420(void *ctx,
