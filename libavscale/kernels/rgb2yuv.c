@@ -7,7 +7,7 @@
 #define RND(x) ((x) + (1 << 15)) >> 16
 
 typedef struct RGB2YUVContext {
-    uint32_t (*coeffs)[3];
+    const uint32_t (*coeffs)[3];
 } RGB2YUVContext;
 
 static const uint32_t bt601_coeffs[3][3] = {
