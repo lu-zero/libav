@@ -3,6 +3,19 @@
 
 #include "../internal.h"
 
+#define S(x)  (x) * (1 << 16)
+#define RND(x) ((x) + (1 << 15)) >> 16
+
+typedef struct RGB2YUVContext {
+    uint32_t (*coeffs)[3];
+} RGB2YUVContext;
+
+static const uint32_t bt709_coeffs[3][3] = {
+    { S( 0.299f), S( 0.587f), S( 0.114f) },
+    { S(-0.168f), S(-0.331f), S( 0.499f) },
+    { S( 0.499f), S(-0.418f), S(-0.081f) },
+};
+
 static void rgb2yuv420(void *ctx,
                        uint8_t *src[AVSCALE_MAX_COMPONENTS],
                        int sstrides[AVSCALE_MAX_COMPONENTS],
@@ -10,13 +23,15 @@ static void rgb2yuv420(void *ctx,
                        int dstrides[AVSCALE_MAX_COMPONENTS],
                        int w, int h)
 {
+    RGB2YUVContext *rgbctx = ctx;
     int i, j;
     int Y, U, V;
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
-            //TODO coefficients
-            Y = (int)(0.299f * src[0][i] + 0.587f * src[1][i] + 0.114f * src[2][i]);
+            Y = RND(rgbctx->coeffs[0][0] * src[0][i] +
+                    rgbctx->coeffs[0][1] * src[1][i] +
+                    rgbctx->coeffs[0][2] * src[2][i]);
             dst[0][i] = av_clip_uint8(Y);
             if (!(j & 1) && !(i & 1)) {
                 int r, g, b;
@@ -28,8 +43,12 @@ static void rgb2yuv420(void *ctx,
                 b = (src[2][i]     + src[2][sstrides[2] + i] +
                      src[2][i + 1] + src[2][sstrides[2] + i + 1]) / 4;
                 //av_log(ctx, AV_LOG_INFO, "0x%02X 0x%02X 0x%02X\n", r, g, b);
-                U = (int)(-0.14713f * r - 0.28886f * g + 0.436f   * b);
-                V = (int)( 0.615f   * r - 0.51499f * g - 0.10001f * b);
+                U = RND(rgbctx->coeffs[1][0] * r +
+                        rgbctx->coeffs[1][1] * g +
+                        rgbctx->coeffs[1][2] * b);
+                V = RND(rgbctx->coeffs[2][0] * r +
+                        rgbctx->coeffs[2][1] * g +
+                        rgbctx->coeffs[2][2] * b);
                 dst[1][i >> 1] = av_clip_uint8(U + 128);
                 dst[2][i >> 1] = av_clip_uint8(V + 128);
             }
@@ -107,6 +126,8 @@ static int rgb2yuv_kernel_init(AVScaleContext *ctx,
                                AVScaleFilterStage *stage,
                                AVDictionary *opts)
 {
+    RGB2YUVContext *rgbctx;
+
     if (ctx->cur_fmt->component[0].depth <= 8)
         stage->do_common = rgb2yuv420;
     else if (ctx->cur_fmt->component[0].depth <= 16)
@@ -116,6 +137,13 @@ static int rgb2yuv_kernel_init(AVScaleContext *ctx,
 
     if (ctx->dst_fmt->nb_components == 4)
         stage->do_component[3] = copy_alpha;
+
+    stage->do_common_ctx = av_malloc(sizeof(RGB2YUVContext));
+    rgbctx = (RGB2YUVContext *)stage->do_common_ctx;
+    if (!rgbctx)
+        return AVERROR(ENOMEM);
+
+    rgbctx->coeffs = bt709_coeffs;
 
     return 0;
 }
