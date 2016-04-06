@@ -187,18 +187,43 @@ int avscale_supported_output(AVPixelFormaton *fmt)
 
 /*
  * Return 1 the src_fmt and dst_fmt are exactly the same.
- * The conversion step is just av_frame_ref
+ * TODO: The conversion step should be just av_frame_ref.
  */
-
+#define CHECK(x) (src->x != dst->x)
 static int is_matching_all(AVScaleContext *ctx)
 {
+    int i;
     const AVPixelFormaton *src = ctx->src_fmt;
     const AVPixelFormaton *dst = ctx->dst_fmt;
 
-    size_t off = offsetof(AVPixelFormaton, model);
-    size_t len = sizeof(*src) - off;
+    if (CHECK(model))
+        return 0;
+    if (CHECK(flags))
+        return 0;
+    if (CHECK(pixel_size))
+        return 0;
+    if (CHECK(nb_palette_entries))
+        return 0;
+    if (CHECK(range))
+        return 0;
+    if (CHECK(primaries))
+        return 0;
+    if (CHECK(transfer))
+        return 0;
+    if (CHECK(space))
+        return 0;
+    if (CHECK(location))
+        return 0;
+    if (CHECK(nb_components))
+        return 0;
 
-    return !memcmp(src + off, dst + off, len);
+    for (i = 0; i < AV_PIX_FORMATON_COMPONENTS; i++) {
+        if (memcmp(&src->component[i], &dst->component[i],
+                   sizeof(AVPixelChromaton)))
+            return 0;
+    }
+
+    return 1;
 }
 
 static int is_planar(const AVPixelFormaton *fmt)
