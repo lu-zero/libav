@@ -85,16 +85,16 @@ static void rgb10_to_yuv420(void *ctx,
                             int dstrides[AVSCALE_MAX_COMPONENTS],
                             int w, int h)
 {
+    RGB2YUVContext *rgbctx = ctx;
     int i, j;
     int Y, U, V;
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
-            //TODO coefficients
-            Y = (int)(  0.299f * READ_RGB(0, i, 0)
-                      + 0.587f * READ_RGB(1, i, 0)
-                      + 0.114f * READ_RGB(2, i, 0));
-            dst[0][i] = av_clip_uint8(Y >> 2);
+            Y = RND(rgbctx->coeffs[0][0] * READ_RGB(0, i, 0) +
+                    rgbctx->coeffs[0][1] * READ_RGB(1, i, 0) +
+                    rgbctx->coeffs[0][2] * READ_RGB(2, i, 0)) >> 2;
+            dst[0][i] = av_clip_uint8(Y);
             if (!(j & 1) && !(i & 1)) {
                 int r, g, b;
                 r =   READ_RGB(0, i,     0) + READ_RGB(0, i,     1)
@@ -103,8 +103,12 @@ static void rgb10_to_yuv420(void *ctx,
                     + READ_RGB(1, i + 1, 0) + READ_RGB(1, i + 1, 1);
                 b =   READ_RGB(2, i,     0) + READ_RGB(2, i,     1)
                     + READ_RGB(2, i + 1, 0) + READ_RGB(2, i + 1, 1);
-                U = (int)(-0.14713f * r - 0.28886f * g + 0.436f   * b) >> 2;
-                V = (int)( 0.615f   * r - 0.51499f * g - 0.10001f * b) >> 2;
+                U = RND(rgbctx->coeffs[1][0] * r +
+                        rgbctx->coeffs[1][1] * g +
+                        rgbctx->coeffs[1][2] * b) >> 2;
+                V = RND(rgbctx->coeffs[2][0] * r +
+                        rgbctx->coeffs[2][1] * g +
+                        rgbctx->coeffs[2][2] * b) >> 2;
                 dst[1][i >> 1] = av_clip_uint8(U + 128);
                 dst[2][i >> 1] = av_clip_uint8(V + 128);
             }
