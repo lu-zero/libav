@@ -3,12 +3,13 @@
 
 #include "../internal.h"
 
-#define S(x)  (x) * (1 << 16)
-#define RND(x) ((x) + (1 << 15)) >> 16
-
 typedef struct RGB2YUVContext {
     const uint32_t (*coeffs)[3];
 } RGB2YUVContext;
+
+
+#define S(x)  (x) * (1 << 16)
+#define RND(x) ((x) + (1 << 15)) >> 16
 
 static const uint32_t bt601_coeffs[3][3] = {
     { S( 0.299f),   S( 0.587f),   S( 0.114f)   },
@@ -17,9 +18,9 @@ static const uint32_t bt601_coeffs[3][3] = {
 };
 
 static const uint32_t bt709_coeffs[3][3] = {
-    { S( 0.299f),   S( 0.587f),   S( 0.114f)   },
-    { S(-0.16866f), S(-0.331f),   S( 0.4997f)  },
-    { S( 0.49981f), S(-0.41853f), S(-0.08128f) },
+    { S( 0.2126f),  S( 0.7152f),  S( 0.0722f)  },
+    { S(-0.09991f), S(-0.33609f), S( 0.436f)   },
+    { S( 0.615f),   S(-0.55861f), S(-0.05639f) },
 };
 
 static void rgb2yuv420(void *ctx,
