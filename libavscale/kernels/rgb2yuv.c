@@ -128,6 +128,11 @@ static void copy_alpha(void *ctx,
     memcpy(dst, src, dstride * h);
 }
 
+static void rgb2yuv_deinit(AVScaleFilterStage *stage)
+{
+    av_freep(&stage->do_common_ctx);
+}
+
 static int rgb2yuv_kernel_init(AVScaleContext *ctx,
                                const AVScaleKernel *kern,
                                AVScaleFilterStage *stage,
@@ -151,6 +156,8 @@ static int rgb2yuv_kernel_init(AVScaleContext *ctx,
         return AVERROR(ENOMEM);
 
     rgbctx->coeffs = bt709_coeffs;
+
+    stage->deinit = rgb2yuv_deinit;
 
     return 0;
 }
