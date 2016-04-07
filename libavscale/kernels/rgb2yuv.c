@@ -36,6 +36,7 @@ static void rgb2yuv420(void *ctx,
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
+            //TODO range
             Y = RND(rgbctx->coeffs[0][0] * src[0][i] +
                     rgbctx->coeffs[0][1] * src[1][i] +
                     rgbctx->coeffs[0][2] * src[2][i]);
@@ -49,7 +50,9 @@ static void rgb2yuv420(void *ctx,
                      src[1][i + 1] + src[1][sstrides[1] + i + 1]) / 4;
                 b = (src[2][i]     + src[2][sstrides[2] + i] +
                      src[2][i + 1] + src[2][sstrides[2] + i + 1]) / 4;
-                //av_log(ctx, AV_LOG_INFO, "0x%02X 0x%02X 0x%02X\n", r, g, b);
+#if 0
+                av_log(ctx, AV_LOG_INFO, "0x%02X 0x%02X 0x%02X\n", r, g, b);
+#endif
                 U = RND(rgbctx->coeffs[1][0] * r +
                         rgbctx->coeffs[1][1] * g +
                         rgbctx->coeffs[1][2] * b);
@@ -91,6 +94,7 @@ static void rgb10_to_yuv420(void *ctx,
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
+            //TODO range
             Y = RND(rgbctx->coeffs[0][0] * READ_RGB(0, i, 0) +
                     rgbctx->coeffs[0][1] * READ_RGB(1, i, 0) +
                     rgbctx->coeffs[0][2] * READ_RGB(2, i, 0)) >> 2;

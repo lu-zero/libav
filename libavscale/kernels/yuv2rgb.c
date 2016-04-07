@@ -36,7 +36,7 @@ static void yuv2rgb(void *ctx,
 
     for (j = 0; j < h; j++) {
         for (i = 0; i < w; i++) {
-            //TODO coefficients & range
+            //TODO range
             r = src[0][i];
             g = src[1][i >> 1] - 128;
             b = src[2][i >> 1] - 128;
