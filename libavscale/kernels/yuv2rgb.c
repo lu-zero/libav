@@ -8,19 +8,19 @@ typedef struct YUV2RGBContext {
 } YUV2RGBContext;
 
 
-#define S(x)  (x) * (1 << 16)
+#define S(x)    (x) * (1 << 16)
 #define RND(x) ((x) + (1 << 15)) >> 16
 
 static const uint32_t bt601_coeffs[3][3] = {
-    { S(1), S( 0),        S( 1.13983f) },
-    { S(1), S(-0.39465f), S(-0.5806f)  },
-    { S(1), S( 2.03211f), S( 0)        },
+    { S(1), S( 0       ), S( 1.13983f) },
+    { S(1), S(-0.39465f), S(-0.5806f ) },
+    { S(1), S( 2.03211f), S( 0       ) },
 };
 
 static const uint32_t bt709_coeffs[3][3] = {
-    { S(1), S( 0),        S( 1.28033f) },
+    { S(1), S( 0       ), S( 1.28033f) },
     { S(1), S(-0.21482f), S(-0.38059f) },
-    { S(1), S( 2.12798f), S( 0)        },
+    { S(1), S( 2.12798f), S( 0       ) },
 };
 
 static void yuv2rgb(void *ctx,
