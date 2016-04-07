@@ -360,10 +360,12 @@ int avscale_config(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
         }
     }
 
+    /* TODO enable as soon as rgbpack is working correctly
     if (!is_planar(ctx->dst_fmt)) {
         if ((ret = prepare_next_stage(ctx, &stage, "rgbpack")) < 0)
             goto fail;
     }
+    */
 
 out:
     ctx->tail = stage;
