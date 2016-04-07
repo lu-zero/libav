@@ -97,12 +97,12 @@ static void rgb10_to_yuv420(void *ctx,
             dst[0][i] = av_clip_uint8(Y);
             if (!(j & 1) && !(i & 1)) {
                 int r, g, b;
-                r =   READ_RGB(0, i,     0) + READ_RGB(0, i,     1)
-                    + READ_RGB(0, i + 1, 0) + READ_RGB(0, i + 1, 1);
-                g =   READ_RGB(1, i,     0) + READ_RGB(1, i,     1)
-                    + READ_RGB(1, i + 1, 0) + READ_RGB(1, i + 1, 1);
-                b =   READ_RGB(2, i,     0) + READ_RGB(2, i,     1)
-                    + READ_RGB(2, i + 1, 0) + READ_RGB(2, i + 1, 1);
+                r = READ_RGB(0, i,     0) + READ_RGB(0, i,     1) +
+                    READ_RGB(0, i + 1, 0) + READ_RGB(0, i + 1, 1);
+                g = READ_RGB(1, i,     0) + READ_RGB(1, i,     1) +
+                    READ_RGB(1, i + 1, 0) + READ_RGB(1, i + 1, 1);
+                b = READ_RGB(2, i,     0) + READ_RGB(2, i,     1) +
+                    READ_RGB(2, i + 1, 0) + READ_RGB(2, i + 1, 1);
                 U = RND(rgbctx->coeffs[1][0] * r +
                         rgbctx->coeffs[1][1] * g +
                         rgbctx->coeffs[1][2] * b) >> 2;
