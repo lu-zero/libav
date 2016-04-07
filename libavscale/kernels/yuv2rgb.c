@@ -90,7 +90,11 @@ static int yuv2rgb_kernel_init(AVScaleContext *ctx,
     if (!yuvctx)
         return AVERROR(ENOMEM);
 
-    yuvctx->coeffs = bt709_coeffs;
+    if (ctx->cur_fmt->space == AVCOL_SPC_BT470BG ||
+        ctx->cur_fmt->space == AVCOL_SPC_SMPTE170M)
+        yuvctx->coeffs = bt601_coeffs;
+    else
+        yuvctx->coeffs = bt709_coeffs;
 
     stage->deinit = yuv2rgb_deinit;
 
