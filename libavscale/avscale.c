@@ -190,11 +190,9 @@ int avscale_supported_output(AVPixelFormaton *fmt)
  * TODO: The conversion step should be just av_frame_ref.
  */
 #define CHECK(x) (src->x != dst->x)
-static int is_matching_all(AVScaleContext *ctx)
+static int is_matching_all(const AVPixelFormaton *src, const AVPixelFormaton *dst)
 {
     int i;
-    const AVPixelFormaton *src = ctx->src_fmt;
-    const AVPixelFormaton *dst = ctx->dst_fmt;
 
     if (CHECK(model))
         return 0;
@@ -321,7 +319,7 @@ int avscale_config(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
     ctx->dst_h   = dst->height;
     ctx->cur_fmt = ctx->src_fmt;
 
-    if (is_matching_all(ctx)) {
+    if (is_matching_all(ctx->src_fmt, ctx->dst_fmt)) {
         if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
             goto fail;
         goto out;
@@ -395,6 +393,29 @@ int avscale_get_component_stride(const AVFrame *src, int component_id)
         return src->linesize[0];
 }
 
+static void reset_context(AVScaleContext *ctx)
+{
+    AVScaleFilterStage *s, *next;
+    int i;
+
+    if (!ctx)
+        return;
+
+    s = ctx->head;
+
+    while (s) {
+        for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
+            av_freep(&s->dst[i]);
+        }
+        next = s->next;
+        if (s->deinit)
+            s->deinit(s);
+        av_free(s);
+        s = next;
+    }
+    ctx->head = ctx->tail = NULL;
+}
+
 int avscale_convert_frame(AVScaleContext *ctx,
                           AVFrame *dstf, const AVFrame *srcf)
 {
@@ -409,6 +430,16 @@ int avscale_convert_frame(AVScaleContext *ctx,
     int  dstride[AVSCALE_MAX_COMPONENTS];
     uint8_t *src2[AVSCALE_MAX_COMPONENTS];
     uint8_t *dst2[AVSCALE_MAX_COMPONENTS];
+
+    if (ctx->head &&
+        (ctx->cur_w != srcf->width  ||
+         ctx->cur_h != srcf->height ||
+         ctx->dst_w != dstf->width  ||
+         ctx->dst_h != dstf->height ||
+         !is_matching_all(ctx->src_fmt, srcf->formaton->pf) ||
+         !is_matching_all(ctx->dst_fmt, dstf->formaton->pf))) {
+        reset_context(ctx);
+    }
 
     if (!ctx->head) {
         if ((ret = avscale_config(ctx, dstf, srcf)) < 0)
@@ -470,27 +501,7 @@ int avscale_convert_frame(AVScaleContext *ctx,
 
 void avscale_free(AVScaleContext **pctx)
 {
-    AVScaleContext *ctx;
-    AVScaleFilterStage *s, *next;
-    int i;
-
-    ctx = *pctx;
-    if (!ctx)
-        return;
-
-    s = ctx->head;
-
-    while (s) {
-        for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
-            av_freep(&s->dst[i]);
-        }
-        next = s->next;
-        if (s->deinit)
-            s->deinit(s);
-        av_free(s);
-        s = next;
-    }
-    ctx->head = ctx->tail = 0;
+    reset_context(*pctx);
 
     av_freep(pctx);
 }
