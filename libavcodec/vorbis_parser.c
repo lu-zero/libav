@@ -27,7 +27,7 @@
 
 #include "libavutil/log.h"
 
-#include "get_bits.h"
+#include "bitstream.h"
 #include "parser.h"
 #include "xiph.h"
 #include "vorbis_parser_internal.h"
@@ -73,7 +73,7 @@ static int parse_id_header(AVVorbisParseContext *s,
 static int parse_setup_header(AVVorbisParseContext *s,
                               const uint8_t *buf, int buf_size)
 {
-    GetBitContext gb, gb0;
+    BitstreamContext bc, bc0;
     uint8_t *rev_buf;
     int i, ret = 0;
     int got_framing_bit, mode_count, got_mode_header, last_mode_count = 0;
@@ -96,19 +96,19 @@ static int parse_setup_header(AVVorbisParseContext *s,
         return AVERROR_INVALIDDATA;
     }
 
-    /* reverse bytes so we can easily read backwards with get_bits() */
+    /* reverse bytes so we can easily read backwards with bitstream_read() */
     if (!(rev_buf = av_malloc(buf_size))) {
         av_log(s, AV_LOG_ERROR, "Out of memory\n");
         return AVERROR(ENOMEM);
     }
     for (i = 0; i < buf_size; i++)
         rev_buf[i] = buf[buf_size - 1 - i];
-    init_get_bits(&gb, rev_buf, buf_size * 8);
+    bitstream_init(&bc, rev_buf, buf_size * 8);
 
     got_framing_bit = 0;
-    while (get_bits_left(&gb) > 97) {
-        if (get_bits1(&gb)) {
-            got_framing_bit = get_bits_count(&gb);
+    while (bitstream_bits_left(&bc) > 97) {
+        if (bitstream_read_bit(&bc)) {
+            got_framing_bit = bitstream_tell(&bc);
             break;
         }
     }
@@ -126,15 +126,15 @@ static int parse_setup_header(AVVorbisParseContext *s,
      * liboggz. */
     mode_count = 0;
     got_mode_header = 0;
-    while (get_bits_left(&gb) >= 97) {
-        if (get_bits(&gb, 8) > 63 || get_bits(&gb, 16) || get_bits(&gb, 16))
+    while (bitstream_bits_left(&bc) >= 97) {
+        if (bitstream_read(&bc, 8) > 63 || bitstream_read(&bc, 16) || bitstream_read(&bc, 16))
             break;
-        skip_bits(&gb, 1);
+        bitstream_skip(&bc, 1);
         mode_count++;
         if (mode_count > 64)
             break;
-        gb0 = gb;
-        if (get_bits(&gb0, 6) + 1 == mode_count) {
+        bc0 = bc;
+        if (bitstream_read(&bc0, 6) + 1 == mode_count) {
             got_mode_header = 1;
             last_mode_count = mode_count;
         }
@@ -169,11 +169,11 @@ static int parse_setup_header(AVVorbisParseContext *s,
     /* The previous window flag is the next bit after the mode */
     s->prev_mask = (s->mode_mask | 0x1) + 1;
 
-    init_get_bits(&gb, rev_buf, buf_size * 8);
-    skip_bits_long(&gb, got_framing_bit);
+    bitstream_init(&bc, rev_buf, buf_size * 8);
+    bitstream_skip(&bc, got_framing_bit);
     for (i = mode_count - 1; i >= 0; i--) {
-        skip_bits_long(&gb, 40);
-        s->mode_blocksize[i] = s->blocksize[get_bits1(&gb)];
+        bitstream_skip(&bc, 40);
+        s->mode_blocksize[i] = s->blocksize[bitstream_read_bit(&bc)];
     }
 
 bad_header:
