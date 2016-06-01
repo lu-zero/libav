@@ -202,7 +202,7 @@ static int is_matching_all(const AVPixelFormaton *src, const AVPixelFormaton *ds
         return 0;
     if (CHECK(nb_palette_entries))
         return 0;
-    if (CHECK(range))
+    if (CHECK(full_range))
         return 0;
     if (CHECK(primaries))
         return 0;
