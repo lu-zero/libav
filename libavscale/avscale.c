@@ -189,32 +189,22 @@ int avscale_supported_output(AVPixelFormaton *fmt)
  * Return 1 the src_fmt and dst_fmt are exactly the same.
  * TODO: The conversion step should be just av_frame_ref.
  */
-#define CHECK(x) (src->x != dst->x)
 static int is_matching_all(const AVPixelFormaton *src, const AVPixelFormaton *dst)
 {
     int i;
 
-    if (CHECK(model))
-        return 0;
-    if (CHECK(flags))
-        return 0;
-    if (CHECK(pixel_size))
-        return 0;
-    if (CHECK(nb_palette_entries))
-        return 0;
-    if (CHECK(full_range))
-        return 0;
-    if (CHECK(primaries))
-        return 0;
-    if (CHECK(transfer))
-        return 0;
-    if (CHECK(space))
-        return 0;
-    if (CHECK(location))
-        return 0;
-    if (CHECK(nb_components))
-        return 0;
-
+#define CHECK(x) if (src->x != dst->x) return 0
+    CHECK(model);
+    CHECK(flags);
+    CHECK(pixel_size);
+    CHECK(nb_palette_entries);
+    CHECK(full_range);
+    CHECK(primaries);
+    CHECK(transfer);
+    CHECK(space);
+    CHECK(location);
+    CHECK(nb_components);
+#undef CHECK
     for (i = 0; i < AV_PIX_FORMATON_COMPONENTS; i++) {
         if (memcmp(&src->component[i], &dst->component[i],
                    sizeof(AVPixelChromaton)))
@@ -244,6 +234,9 @@ static int is_planar(const AVPixelFormaton *fmt)
  */
 static int is_compatible(const AVPixelFormaton *fmt)
 {
+    if (fmt->model != AVCOL_MODEL_RGB && fmt->model != AVCOL_MODEL_YUV)
+        av_log(NULL, AV_LOG_ERROR, "not implemented\n");
+
     return fmt->model == AVCOL_MODEL_RGB ||
            fmt->model == AVCOL_MODEL_YUV;
 }
