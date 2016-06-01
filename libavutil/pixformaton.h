@@ -174,7 +174,7 @@ typedef struct AVPixelFormaton {
     /**
      * Standard-specific model details
      */
-    enum AVColorRange range;
+    int full_range;
     enum AVColorPrimaries primaries;
     enum AVColorTransferCharacteristic transfer;
     enum AVColorSpace space;

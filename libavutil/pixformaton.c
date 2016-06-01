@@ -119,11 +119,7 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
     else
         pf->model = AVCOL_MODEL_YUV;
 
-    if (av_strstart(desc->name, "yuvj", NULL))
-        pf->range = AVCOL_RANGE_JPEG;
-    else
-        pf->range = AVCOL_RANGE_UNSPECIFIED;
-
+    pf->full_range = !!av_strstart(desc->name, "yuvj", NULL);
     pf->primaries = AVCOL_PRI_UNSPECIFIED;
     pf->transfer  = AVCOL_TRC_UNSPECIFIED;
     pf->space     = AVCOL_SPC_UNSPECIFIED;
