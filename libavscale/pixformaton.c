@@ -19,12 +19,13 @@
 
 #include <string.h>
 
-#include "avstring.h"
-#include "buffer.h"
+#include "libavutil/avstring.h"
+#include "libavutil/buffer.h"
+#include "libavutil/mem.h"
+#include "libavutil/pixdesc.h"
+#include "libavutil/pixfmt.h"
+
 #include "pixformaton.h"
-#include "mem.h"
-#include "pixdesc.h"
-#include "pixfmt.h"
 
 typedef struct AVPixelFormatonRefInternal {
     AVPixelFormaton *pf;

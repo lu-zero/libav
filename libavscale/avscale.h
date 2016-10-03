@@ -21,7 +21,8 @@
 #define AVSCALE_AVSCALE_H
 
 #include "libavutil/frame.h"
-#include "libavutil/pixformaton.h"
+
+#include "pixformaton.h"
 
 #include "version.h"
 

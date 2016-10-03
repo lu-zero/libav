@@ -34,7 +34,6 @@
 #include "rational.h"
 #include "samplefmt.h"
 #include "pixfmt.h"
-#include "pixformaton.h"
 #include "version.h"
 
 
@@ -407,8 +406,6 @@ typedef struct AVFrame {
      * purpose.
      */
     AVBufferRef *opaque_ref;
-    AVPixelFormaton *formaton;
-    AVPixelFormatonRef *formaton;
 } AVFrame;
 
 /**

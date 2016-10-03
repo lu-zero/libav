@@ -17,10 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVUTIL_PIXFORMATON_H
-#define AVUTIL_PIXFORMATON_H
+#ifndef AVSCALE_PIXFORMATON_H
+#define AVSCALE_PIXFORMATON_H
 
-#include "pixdesc.h"
+#include <stdint.h>
+
+#include "libavutil/frame.h"
 
 /**
  * The format is big-endian
@@ -197,4 +199,4 @@ void av_pixformaton_unref(AVPixelFormatonRef **pf);
 
 AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt);
 
-#endif /* AVUTIL_PIXFORMATON_H */
+#endif /* AVSCALE_PIXFORMATON_H */

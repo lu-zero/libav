@@ -24,7 +24,6 @@
 #include "frame.h"
 #include "imgutils.h"
 #include "mem.h"
-#include "pixformaton.h"
 #include "samplefmt.h"
 
 static void get_frame_defaults(AVFrame *frame)
@@ -44,8 +43,6 @@ static void get_frame_defaults(AVFrame *frame)
     frame->colorspace          = AVCOL_SPC_UNSPECIFIED;
     frame->color_range         = AVCOL_RANGE_UNSPECIFIED;
     frame->chroma_location     = AVCHROMA_LOC_UNSPECIFIED;
-
-    av_pixformaton_unref(&frame->formaton);
 }
 
 static void free_side_data(AVFrameSideData **ptr_sd)
@@ -98,12 +95,6 @@ static int get_video_buffer(AVFrame *frame, int align)
     if (!desc)
         return AVERROR(EINVAL);
 
-    if (!frame->formaton) {
-        frame->formaton = av_pixformaton_from_pixfmt(frame->format);
-        if (!frame->formaton)
-            return AVERROR(EINVAL);
-    }
-
     if ((ret = av_image_check_size(frame->width, frame->height, 0, NULL)) < 0)
         return ret;
 
@@ -120,10 +111,10 @@ static int get_video_buffer(AVFrame *frame, int align)
             frame->linesize[i] = FFALIGN(frame->linesize[i], align);
     }
 
-    for (i = 0; i < frame->formaton->pf->nb_components && frame->linesize[i]; i++) {
+    for (i = 0; i < desc->nb_components && frame->linesize[i]; i++) {
         int h = frame->height;
         if (i == 1 || i == 2)
-            h = AV_CEIL_RSHIFT(h, frame->formaton->pf->component[i].v_sub);
+            h = AV_CEIL_RSHIFT(h, desc->log2_chroma_h);
 
         frame->buf[i] = av_buffer_alloc(frame->linesize[i] * h);
         if (!frame->buf[i])
@@ -131,20 +122,9 @@ static int get_video_buffer(AVFrame *frame, int align)
 
         frame->data[i] = frame->buf[i]->data;
     }
-
-    if (desc->flags & AV_PIX_FMT_FLAG_PAL ||
-        desc->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
-        int size;
-
-        // XXX Compatibility until the palette_entries information is stored somewhere.
-        if (frame->formaton->pf->nb_palette_entries) {
-            size = frame->formaton->pf->nb_palette_entries *
-                   frame->formaton->pf->pixel_size;
-        } else
-            size = 1024;
-
+    if (desc->flags & AV_PIX_FMT_FLAG_PAL || desc->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
         av_buffer_unref(&frame->buf[1]);
-        frame->buf[1] = av_buffer_alloc(size);
+        frame->buf[1] = av_buffer_alloc(1024);
         if (!frame->buf[1])
             goto fail;
         frame->data[1] = frame->buf[1]->data;
@@ -302,14 +282,6 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
 
     memcpy(dst->data,     src->data,     sizeof(src->data));
     memcpy(dst->linesize, src->linesize, sizeof(src->linesize));
-
-    // XXX Compatibility to make sure dst has always a pixformaton ready
-    if (src->formaton)
-        dst->formaton = av_pixformaton_ref(src->formaton);
-    else
-        dst->formaton = av_pixformaton_from_pixfmt(src->format);
-    if (!dst->formaton)
-        goto fail;
 
     return 0;
 

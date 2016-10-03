@@ -1,6 +1,7 @@
 NAME = avscale
 
 HEADERS = avscale.h         \
+          pixformaton.h     \
           version.h         \
 
 KERNELS += kernels/murder.o           \
@@ -12,6 +13,7 @@ KERNELS += kernels/murder.o           \
 
 OBJS = avscale.o                                                        \
        internal.o                                                       \
+       pixformaton.o                                                    \
        utils.o                                                          \
        $(KERNELS)
 

@@ -23,6 +23,8 @@
 #include "libavutil/avstring.h"
 #include "libavutil/common.h"
 #include "libavutil/mem.h"
+#include "libavutil/pixdesc.h"
+
 #include "internal.h"
 
 AVScaleContext *avscale_alloc_context(void)
@@ -296,8 +298,8 @@ int avscale_config(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
 {
     AVScaleFilterStage *stage = 0;
     int ret = 0, need_scaling = 0, need_upscaling = 0;
-    AVPixelFormatonRef *src_fmt_ref = av_pixformaton_ref(src->formaton);
-    AVPixelFormatonRef *dst_fmt_ref = av_pixformaton_ref(dst->formaton);
+    AVPixelFormatonRef *src_fmt_ref = av_pixformaton_from_pixfmt(src->format);
+    AVPixelFormatonRef *dst_fmt_ref = av_pixformaton_from_pixfmt(dst->format);
 
     if (!src_fmt_ref || !dst_fmt_ref) {
         ret = AVERROR(ENOSYS);
@@ -368,14 +370,16 @@ fail:
     return ret;
 }
 
-uint8_t *avscale_get_component_ptr(const AVFrame *src, int component_id)
+uint8_t *avscale_get_component_ptr(const AVFrame *src,
+                                   const AVPixelFormaton *pf,
+                                   int component_id)
 { // currently a simple hack - it has to be extended for e.g. NV12
-    if (component_id >= src->formaton->pf->nb_components)
+    if (component_id >= pf->nb_components)
         return 0;
-    if (!src->formaton->pf->component[component_id].packed)
-        return src->data[src->formaton->pf->component[component_id].plane];
+    if (!pf->component[component_id].packed)
+        return src->data[pf->component[component_id].plane];
     else
-        return src->data[0] + src->formaton->pf->component[component_id].offset;
+        return src->data[0] + pf->component[component_id].offset;
 }
 
 int avscale_get_component_stride(const AVFrame *src, int component_id)
@@ -429,8 +433,7 @@ int avscale_convert_frame(AVScaleContext *ctx,
          ctx->cur_h != srcf->height ||
          ctx->dst_w != dstf->width  ||
          ctx->dst_h != dstf->height ||
-         !is_matching_all(ctx->src_fmt, srcf->formaton->pf) ||
-         !is_matching_all(ctx->dst_fmt, dstf->formaton->pf))) {
+         !is_matching_all(ctx->src_fmt, ctx->dst_fmt))) {
         reset_context(ctx);
     }
 
@@ -443,7 +446,7 @@ int avscale_convert_frame(AVScaleContext *ctx,
     stage = ctx->head;
 
     for (i = 0; i < AVSCALE_MAX_COMPONENTS; i++) {
-        src[i]     = avscale_get_component_ptr(srcf, i);
+        src[i]     = avscale_get_component_ptr(srcf, ctx->src_fmt, i);
         sstride[i] = avscale_get_component_stride(srcf, i);
     }
 
@@ -457,7 +460,7 @@ int avscale_convert_frame(AVScaleContext *ctx,
                 dst[i]     = stage->dst[i];
                 dstride[i] = stage->dst_stride[i];
             } else {
-                dst[i]     = avscale_get_component_ptr(dstf, i);
+                dst[i]     = avscale_get_component_ptr(dstf, ctx->dst_fmt, i);
                 dstride[i] = avscale_get_component_stride(dstf, i);
             }
         }

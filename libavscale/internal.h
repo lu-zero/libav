@@ -22,9 +22,9 @@
 
 #include "libavutil/dict.h"
 #include "libavutil/log.h"
-#include "libavutil/pixformaton.h"
 
 #include "avscale.h"
+#include "pixformaton.h"
 
 #define AVSCALE_MAX_COMPONENTS AV_PIX_FORMATON_COMPONENTS
 
@@ -78,7 +78,9 @@ int avscale_apply_kernel(AVScaleContext *ctx,
                          const char *name,
                          AVScaleFilterStage *stage);
 
-uint8_t *avscale_get_component_ptr(const AVFrame *src, int component_id);
+uint8_t *avscale_get_component_ptr(const AVFrame *src,
+                                   const AVPixelFormaton *pf,
+                                   int component_id);
 int avscale_get_component_stride(const AVFrame *src, int component_id);
 
 
