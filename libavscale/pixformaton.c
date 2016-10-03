@@ -125,10 +125,10 @@ AVPixelFormatonRef *av_pixformaton_from_frame(const AVFrame *frame)
 
     //TODO do we really all color spaces in the world? we should offer
     // a list of available coefficients and convert back and forth
-    pf->primaries  = frame->color_primaries;
-    pf->transfer   = frame->color_trc;
-    pf->space      = frame->colorspace;
-    pf->location   = frame->chroma_location;
+    pf->primaries = frame->color_primaries;
+    pf->transfer  = frame->color_trc;
+    pf->space     = frame->colorspace;
+    pf->location  = frame->chroma_location;
 
     pf->nb_components = desc->nb_components;
 
@@ -139,14 +139,14 @@ AVPixelFormatonRef *av_pixformaton_from_frame(const AVFrame *frame)
         AVPixelChromaton *chromaton = &pf->component[i];
         const AVComponentDescriptor *comp = &desc->comp[i];
 
-        chromaton->plane     = comp->plane;
-        chromaton->next      = comp->step;
-        chromaton->h_sub = i > 0 && i < 3 ? desc->log2_chroma_w : 0;
-        chromaton->v_sub = i > 0 && i < 3 ? desc->log2_chroma_h : 0;
-        chromaton->offset    = comp->offset;
-        chromaton->shift     = comp->shift;
-        chromaton->depth     = comp->depth;
-        chromaton->packed    = !(desc->flags & AV_PIX_FMT_FLAG_PLANAR);
+        chromaton->plane  = comp->plane;
+        chromaton->next   = comp->step;
+        chromaton->h_sub  = i > 0 && i < 3 ? desc->log2_chroma_w : 0;
+        chromaton->v_sub  = i > 0 && i < 3 ? desc->log2_chroma_h : 0;
+        chromaton->offset = comp->offset;
+        chromaton->shift  = comp->shift;
+        chromaton->depth  = comp->depth;
+        chromaton->packed = !(desc->flags & AV_PIX_FMT_FLAG_PLANAR);
     }
 
     return pref;
