@@ -3,8 +3,9 @@
 
 #include "libavutil/frame.h"
 #include "libavutil/mem.h"
+#include "libavutil/pixdesc.h"
 
-#include "avscale.h"
+#include "libavscale/avscale.h"
 
 int main(int argc, char **argv)
 {
