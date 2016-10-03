@@ -98,14 +98,14 @@ int avscale_convert_frame(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
  *
  * @return 0 if not valid, > 0 if valid
  */
-int avscale_supported_input(AVPixelFormaton *fmt);
+int avscale_supported_input(enum AVPixelFormat pix_fmt);
 
 /**
  * Check if the output formaton is valid
  *
  * @return 0 if not valid, > 0 if valid
  */
-int avscale_supported_output(AVPixelFormaton *fmt);
+int avscale_supported_output(enum AVPixelFormat pix_fmt);
 
 /**
  * Return the LIBAVSCALE_VERSION_INT constant.

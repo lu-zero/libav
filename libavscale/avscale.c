@@ -90,24 +90,32 @@ err:
     return ret;
 }
 
-int avscale_supported_input(AVPixelFormaton *fmt)
+int avscale_supported_input(enum AVPixelFormat pix_fmt)
 {
+    int is_rgb, is_yuv;
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+    if (!desc)
+        return AVERROR_BUG;
 
-    if (fmt->model != AVCOL_MODEL_RGB &&
-        fmt->model != AVCOL_MODEL_YUV ||
-        fmt->pixel_size > 16) {
+    is_rgb = desc->flags & AV_PIX_FMT_FLAG_RGB;
+    is_yuv = !!av_strstart(desc->name, "yuv", NULL);
+    if (!is_rgb && !is_yuv && desc->comp[0].depth > 16) {
         return 0;
     }
 
     return 1;
 }
 
-int avscale_supported_output(AVPixelFormaton *fmt)
+int avscale_supported_output(enum AVPixelFormat pix_fmt)
 {
+    int is_rgb, is_yuv;
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+    if (!desc)
+        return AVERROR_BUG;
 
-    if (fmt->model != AVCOL_MODEL_RGB &&
-        fmt->model != AVCOL_MODEL_YUV ||
-        fmt->pixel_size > 16) {
+    is_rgb = desc->flags & AV_PIX_FMT_FLAG_RGB;
+    is_yuv = !!av_strstart(desc->name, "yuv", NULL);
+    if (!is_rgb && !is_yuv && desc->comp[0].depth > 16) {
         return 0;
     }
 
@@ -298,8 +306,8 @@ int avscale_config(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
 {
     AVScaleFilterStage *stage = 0;
     int ret = 0, need_scaling = 0, need_upscaling = 0;
-    AVPixelFormatonRef *src_fmt_ref = av_pixformaton_from_pixfmt(src->format);
-    AVPixelFormatonRef *dst_fmt_ref = av_pixformaton_from_pixfmt(dst->format);
+    AVPixelFormatonRef *src_fmt_ref = av_pixformaton_from_frame(src);
+    AVPixelFormatonRef *dst_fmt_ref = av_pixformaton_from_frame(dst);
 
     if (!src_fmt_ref || !dst_fmt_ref) {
         ret = AVERROR(ENOSYS);

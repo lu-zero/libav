@@ -197,6 +197,6 @@ AVPixelFormatonRef *av_pixformaton_ref(AVPixelFormatonRef *pf);
 
 void av_pixformaton_unref(AVPixelFormatonRef **pf);
 
-AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt);
+AVPixelFormatonRef *av_pixformaton_from_frame(const AVFrame *frame);
 
 #endif /* AVSCALE_PIXFORMATON_H */

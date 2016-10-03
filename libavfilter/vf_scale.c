@@ -109,7 +109,6 @@ static av_cold void uninit(AVFilterContext *ctx)
 static int query_formats(AVFilterContext *ctx)
 {
     AVFilterFormats *formats;
-    AVPixelFormatonRef *fmt;
     enum AVPixelFormat pix_fmt;
     int ret;
 
@@ -118,14 +117,11 @@ static int query_formats(AVFilterContext *ctx)
         formats = NULL;
         while ((desc = av_pix_fmt_desc_next(desc))) {
             pix_fmt = av_pix_fmt_desc_get_id(desc);
-            fmt     = av_pixformaton_from_pixfmt(pix_fmt);
-            if (avscale_supported_input(fmt->pf) &&
+            if (avscale_supported_input(pix_fmt) &&
                 (ret = ff_add_format(&formats, pix_fmt)) < 0) {
-                av_pixformaton_unref(&fmt);
                 ff_formats_unref(&formats);
                 return ret;
             }
-            av_pixformaton_unref(&fmt);
         }
         ff_formats_ref(formats, &ctx->inputs[0]->out_formats);
     }
@@ -134,14 +130,11 @@ static int query_formats(AVFilterContext *ctx)
         formats = NULL;
         while ((desc = av_pix_fmt_desc_next(desc))) {
             pix_fmt = av_pix_fmt_desc_get_id(desc);
-            fmt = av_pixformaton_from_pixfmt(pix_fmt);
-            if (avscale_supported_output(fmt->pf) &&
+            if (avscale_supported_output(pix_fmt) &&
                 (ret = ff_add_format(&formats, pix_fmt)) < 0) {
-                av_pixformaton_unref(&fmt);
                 ff_formats_unref(&formats);
                 return ret;
             }
-            av_pixformaton_unref(&fmt);
         }
         ff_formats_ref(formats, &ctx->outputs[0]->in_formats);
     }

@@ -90,7 +90,7 @@ void av_pixformaton_unref(AVPixelFormatonRef **pref)
     av_freep(&pref_int);
 }
 
-AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
+AVPixelFormatonRef *av_pixformaton_from_frame(const AVFrame *frame)
 {
     AVPixelFormaton *pf;
     AVPixelFormatonRef *pref;
@@ -98,7 +98,7 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
 
     int i;
 
-    desc = av_pix_fmt_desc_get(pix_fmt);
+    desc = av_pix_fmt_desc_get(frame->format);
     if (!desc)
         return NULL;
 
@@ -120,11 +120,15 @@ AVPixelFormatonRef *av_pixformaton_from_pixfmt(enum AVPixelFormat pix_fmt)
     else
         pf->model = AVCOL_MODEL_YUV;
 
-    pf->full_range = !!av_strstart(desc->name, "yuvj", NULL);
-    pf->primaries = AVCOL_PRI_UNSPECIFIED;
-    pf->transfer  = AVCOL_TRC_UNSPECIFIED;
-    pf->space     = AVCOL_SPC_UNSPECIFIED;
-    pf->location  = AVCHROMA_LOC_UNSPECIFIED;
+    pf->full_range = !!av_strstart(desc->name, "yuvj", NULL) ||
+                     frame->color_range == AVCOL_RANGE_JPEG;
+
+    //TODO do we really all color spaces in the world? we should offer
+    // a list of available coefficients and convert back and forth
+    pf->primaries  = frame->color_primaries;
+    pf->transfer   = frame->color_trc;
+    pf->space      = frame->colorspace;
+    pf->location   = frame->chroma_location;
 
     pf->nb_components = desc->nb_components;
 
