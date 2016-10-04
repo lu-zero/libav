@@ -1818,7 +1818,7 @@ static const char * const chroma_location_names[] = {
     [AVCHROMA_LOC_BOTTOM] = "bottom",
 };
 
-static const char *color_model_names[AVCOL_MODEL_NB] = {
+static const char *color_model_names[] = {
     [AVCOL_MODEL_RGB] = "rgb",
     [AVCOL_MODEL_XYZ] = "xyz",
     [AVCOL_MODEL_YUV] = "yuv",
