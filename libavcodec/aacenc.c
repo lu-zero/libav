@@ -739,7 +739,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
         if (avctx->sample_rate == avpriv_mpeg4audio_sample_rates[i])
             break;
 
-    s->channels = avctx->channels;
+    s->channels = avctx->ch_layout.nb_channels;
 
     ERROR_IF(i == 16,
              "Unsupported sample rate %d\n", avctx->sample_rate);

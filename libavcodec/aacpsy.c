@@ -253,13 +253,13 @@ static av_cold void lame_window_init(AacPsyContext *ctx, AVCodecContext *avctx)
 {
     int i, j;
 
-    for (i = 0; i < avctx->channels; i++) {
+    for (i = 0; i < avctx->ch_layout.nb_channels; i++) {
         AacPsyChannel *pch = &ctx->ch[i];
 
         if (avctx->flags & AV_CODEC_FLAG_QSCALE)
             pch->attack_threshold = psy_vbr_map[avctx->global_quality / FF_QP2LAMBDA].st_lrm;
         else
-            pch->attack_threshold = lame_calc_attack_threshold(avctx->bit_rate / avctx->channels / 1000);
+            pch->attack_threshold = lame_calc_attack_threshold(avctx->bit_rate / avctx->ch_layout.nb_channels / 1000);
 
         for (j = 0; j < AAC_NUM_BLOCKS_SHORT * PSY_LAME_NUM_SUBBLOCKS; j++)
             pch->prev_energy_subshort[j] = 10.0f;
@@ -293,7 +293,7 @@ static av_cold int psy_3gpp_init(FFPsyContext *ctx) {
     float bark;
     int i, j, g, start;
     float prev, minscale, minath, minsnr, pe_min;
-    const int chan_bitrate = ctx->avctx->bit_rate / ctx->avctx->channels;
+    const int chan_bitrate = ctx->avctx->bit_rate / ctx->avctx->ch_layout.nb_channels;
     const int bandwidth    = ctx->avctx->cutoff ? ctx->avctx->cutoff : ctx->avctx->sample_rate / 2;
     const float num_bark   = calc_bark((float)bandwidth);
 
@@ -350,7 +350,7 @@ static av_cold int psy_3gpp_init(FFPsyContext *ctx) {
         }
     }
 
-    pctx->ch = av_mallocz(sizeof(AacPsyChannel) * ctx->avctx->channels);
+    pctx->ch = av_mallocz(sizeof(AacPsyChannel) * ctx->avctx->ch_layout.nb_channels);
     if (!pctx->ch) {
         av_freep(&pctx);
         return AVERROR(ENOMEM);
@@ -391,7 +391,7 @@ static av_unused FFPsyWindowInfo psy_3gpp_window(FFPsyContext *ctx,
                                                  int channel, int prev_type)
 {
     int i, j;
-    int br               = ctx->avctx->bit_rate / ctx->avctx->channels;
+    int br               = ctx->avctx->bit_rate / ctx->avctx->ch_layout.nb_channels;
     int attack_ratio     = br <= 16000 ? 18 : 10;
     AacPsyContext *pctx = (AacPsyContext*) ctx->model_priv_data;
     AacPsyChannel *pch  = &pctx->ch[channel];

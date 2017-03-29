@@ -114,4 +114,20 @@ static const uint64_t aac_channel_layout[16] = {
     /* AV_CH_LAYOUT_7POINT1_TOP, */
 };
 
+static const AVChannelLayout aac_ch_layouts[16] = {
+    AV_CHANNEL_LAYOUT_MONO,
+    AV_CHANNEL_LAYOUT_STEREO,
+    AV_CHANNEL_LAYOUT_SURROUND,
+    AV_CHANNEL_LAYOUT_4POINT0,
+    AV_CHANNEL_LAYOUT_5POINT0_BACK,
+    AV_CHANNEL_LAYOUT_5POINT1_BACK,
+    AV_CHANNEL_LAYOUT_7POINT1_WIDE_BACK,
+    { 0 },
+    { 0 },
+    { 0 },
+    AV_CHANNEL_LAYOUT_6POINT1,
+    AV_CHANNEL_LAYOUT_7POINT1,
+    { 0 },
+};
+
 #endif /* AVCODEC_AACDECTAB_H */
