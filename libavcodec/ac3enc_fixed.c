@@ -144,6 +144,11 @@ AVCodec ff_ac3_fixed_encoder = {
     .sample_fmts     = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_S16P,
                                                       AV_SAMPLE_FMT_NONE },
     .priv_class      = &ac3enc_class,
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     .channel_layouts = ff_ac3_channel_layouts,
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    .ch_layouts      = ff_ac3_ch_layouts,
     .defaults        = ac3_defaults,
 };

@@ -190,10 +190,10 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
     avctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
     /* allow downmixing to stereo or mono */
-    if (avctx->channels > 1 &&
+    if (avctx->ch_layout.nb_channels > 1 &&
         avctx->request_channel_layout == AV_CH_LAYOUT_MONO)
         avctx->channels = 1;
-    else if (avctx->channels > 2 &&
+    else if (avctx->ch_layout.nb_channels > 2 &&
              avctx->request_channel_layout == AV_CH_LAYOUT_STEREO)
         avctx->channels = 2;
     s->downmixed = 1;

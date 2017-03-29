@@ -259,6 +259,11 @@ AVCodec ff_eac3_encoder = {
     .sample_fmts     = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_FLTP,
                                                       AV_SAMPLE_FMT_NONE },
     .priv_class      = &eac3enc_class,
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     .channel_layouts = ff_ac3_channel_layouts,
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    .ch_layouts      = ff_ac3_ch_layouts,
     .defaults        = ac3_defaults,
 };

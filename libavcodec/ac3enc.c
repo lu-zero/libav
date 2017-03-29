@@ -100,6 +100,45 @@ const uint64_t ff_ac3_channel_layouts[19] = {
      0
 };
 
+extern const AVChannelLayout ff_ac3_ch_layouts[19] = {
+    AV_CHANNEL_LAYOUT_MONO,
+    AV_CHANNEL_LAYOUT_STEREO,
+    AV_CHANNEL_LAYOUT_2_1,
+    AV_CHANNEL_LAYOUT_SURROUND,
+    AV_CHANNEL_LAYOUT_2_2,
+    AV_CHANNEL_LAYOUT_QUAD,
+    AV_CHANNEL_LAYOUT_4POINT0,
+    AV_CHANNEL_LAYOUT_5POINT0,
+    AV_CHANNEL_LAYOUT_5POINT0_BACK,
+    {
+        .nb_channels = 2,
+        .order       = AV_CHANNEL_ORDER_NATIVE,
+        .u.mask      = AV_CH_LAYOUT_MONO | AV_CH_LOW_FREQUENCY,
+    },
+    {
+        .nb_channels = 3,
+        .order       = AV_CHANNEL_ORDER_NATIVE,
+        .u.mask      = AV_CH_LAYOUT_STEREO | AV_CH_LOW_FREQUENCY,
+    },
+    {
+        .nb_channels = 4,
+        .order       = AV_CHANNEL_ORDER_NATIVE,
+        .u.mask      = AV_CH_LAYOUT_2_1 | AV_CH_LOW_FREQUENCY,
+    },
+    {
+        .nb_channels = 4,
+        .order       = AV_CHANNEL_ORDER_NATIVE,
+        .u.mask      = AV_CH_LAYOUT_SURROUND | AV_CH_LOW_FREQUENCY,
+    },
+    {
+        .nb_channels = 5,
+        .order       = AV_CHANNEL_ORDER_NATIVE,
+        .u.mask      = AV_CH_LAYOUT_4POINT0 | AV_CH_LOW_FREQUENCY,
+    },
+    AV_CHANNEL_LAYOUT_5POINT1,
+    AV_CHANNEL_LAYOUT_5POINT1_BACK,
+    { 0 },
+};
 
 /**
  * LUT to select the bandwidth code based on the bit rate, sample rate, and
