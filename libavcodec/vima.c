@@ -146,9 +146,8 @@ static int decode_frame(AVCodecContext *avctx, void *data,
         channel_hint[0] = ~channel_hint[0];
         channels = 2;
     }
-    avctx->channels = channels;
-    avctx->channel_layout = (channels == 2) ? AV_CH_LAYOUT_STEREO
-                                            : AV_CH_LAYOUT_MONO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    av_channel_layout_default(&avctx->ch_layout, channels);
     pcm_data[0] = bitstream_read_signed(&bc, 16);
     if (channels > 1) {
         channel_hint[1] = bitstream_read_signed(&bc, 8);
