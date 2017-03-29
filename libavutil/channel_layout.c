@@ -236,6 +236,7 @@ uint64_t av_channel_layout_extract_channel(uint64_t channel_layout, int index)
 void av_channel_layout_from_mask(AVChannelLayout *channel_layout,
                                  uint64_t mask)
 {
+    av_channel_layout_uninit(channel_layout);
     channel_layout->order       = AV_CHANNEL_ORDER_NATIVE;
     channel_layout->nb_channels = av_popcount64(mask);
     channel_layout->u.mask      = mask;
@@ -413,6 +414,7 @@ int av_channel_layout_compare(const AVChannelLayout *chl, const AVChannelLayout 
 
 void av_channel_layout_default(AVChannelLayout *ch_layout, int nb_channels)
 {
+    av_channel_layout_uninit(ch_layout);
     switch (nb_channels) {
     case 1: *ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;     break;
     case 2: *ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;   break;
