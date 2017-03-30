@@ -55,6 +55,39 @@ static void vc2hqdecode_debug_callback(char *msg, void *opaque)
     av_log(NULL, AV_LOG_DEBUG, "%s\n", msg);
 }
 
+static int vc2hqdecode_pix_fmt(AVCodecContext *avctx, VC2DecoderOutputFormat *fmt)
+{
+    switch (fmt->signal_range) {
+    case VC2DECODER_PSR_10BITVID:
+        switch (fmt->source_sampling) {
+        case VC2DECODER_CDS_420:
+            return AV_PIX_FMT_YUV420P10LE;
+        case VC2DECODER_CDS_422:
+            return AV_PIX_FMT_YUV422P10LE;
+        case VC2DECODER_CDS_444:
+            return AV_PIX_FMT_YUV444P10LE;
+        default:
+            goto fail;
+        }
+    case VC2DECODER_PSR_12BITVID:
+        switch (fmt->source_sampling) {
+        case VC2DECODER_CDS_420:
+            return AV_PIX_FMT_YUV420P12LE;
+        case VC2DECODER_CDS_422:
+            return AV_PIX_FMT_YUV422P12LE;
+        case VC2DECODER_CDS_444:
+            return AV_PIX_FMT_YUV444P12LE;
+        default:
+            goto fail;
+        }
+        default:
+            goto fail;
+    }
+
+fail:
+    av_log(avctx, AV_LOG_ERROR, "Unsupported format\n");
+    return AVERROR(ENOSYS);
+}
 
 static av_cold int vc2hqdecode_decode_init(AVCodecContext *avctx)
 {
@@ -101,10 +134,13 @@ static int vc2hqdecode_decode_frame(AVCodecContext *avctx, void *data,
         dp = avpkt->data;
     }
 
-    /* FIXME: Let's assume no reconfiguration is needed for now. */
     res = vc2decode_get_output_format(vcc->handle, &vcc->fmt);
     if (res != VC2DECODER_OK)
         return AVERROR_INVALIDDATA;
+
+    avctx->pix_fmt = vc2hqdecode_pix_fmt(avctx, &vcc->fmt);
+    if (avctx->pix_fmt < 0)
+        return avctx->pix_fmt;
 
     ff_set_dimensions(avctx, vcc->fmt.width, vcc->fmt.height);
 
