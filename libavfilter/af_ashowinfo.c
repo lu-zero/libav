@@ -57,7 +57,7 @@ typedef struct AShowInfoContext {
 static int config_input(AVFilterLink *inlink)
 {
     AShowInfoContext *s = inlink->dst->priv;
-    int channels = av_get_channel_layout_nb_channels(inlink->channel_layout);
+    int channels = inlink->ch_layout.nb_channels;
     s->plane_checksums = av_malloc(channels * sizeof(*s->plane_checksums));
     if (!s->plane_checksums)
         return AVERROR(ENOMEM);
@@ -192,9 +192,9 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *buf)
 {
     AVFilterContext *ctx = inlink->dst;
     AShowInfoContext *s  = ctx->priv;
-    char chlayout_str[128];
+    char *chlayout_str;
     uint32_t checksum = 0;
-    int channels    = av_get_channel_layout_nb_channels(buf->channel_layout);
+    int channels    = buf->ch_layout.nb_channels;
     int planar      = av_sample_fmt_is_planar(buf->format);
     int block_align = av_get_bytes_per_sample(buf->format) * (planar ? 1 : channels);
     int data_size   = buf->nb_samples * block_align;
@@ -209,9 +209,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *buf)
                        s->plane_checksums[0];
     }
 
-    av_get_channel_layout_string(chlayout_str, sizeof(chlayout_str), -1,
-                                 buf->channel_layout);
-
+    chlayout_str = av_channel_layout_describe(&buf->ch_layout);
     av_log(ctx, AV_LOG_INFO,
            "n:%"PRIu64" pts:%"PRId64" pts_time:%f "
            "fmt:%s chlayout:%s rate:%d nb_samples:%d "
@@ -220,6 +218,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *buf)
            av_get_sample_fmt_name(buf->format), chlayout_str,
            buf->sample_rate, buf->nb_samples,
            checksum);
+    av_free(chlayout_str);
 
     av_log(ctx, AV_LOG_INFO, "plane_checksums: [ ");
     for (i = 0; i < planes; i++)
