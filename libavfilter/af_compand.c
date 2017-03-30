@@ -342,8 +342,7 @@ static int config_output(AVFilterLink *outlink)
     const int sample_rate = outlink->sample_rate;
     double radius         = s->curve_dB * M_LN10 / 20.0;
     const char *p;
-    const int channels    =
-        av_get_channel_layout_nb_channels(outlink->channel_layout);
+    const int channels    = outlink->ch_layout.nb_channels;
     int nb_attacks, nb_decays, nb_points;
     int new_nb_items, num;
     int i;
@@ -547,7 +546,10 @@ static int config_output(AVFilterLink *outlink)
 
     s->delay_frame->format         = outlink->format;
     s->delay_frame->nb_samples     = s->delay_samples;
-    s->delay_frame->channel_layout = outlink->channel_layout;
+    err = av_channel_layout_copy(&s->delay_frame->ch_layout,
+                                 &outlink->ch_layout);
+    if (err < 0)
+        return err;
 
     err = av_frame_get_buffer(s->delay_frame, 32);
     if (err)
