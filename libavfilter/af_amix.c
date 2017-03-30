@@ -226,7 +226,7 @@ static int config_output(AVFilterLink *outlink)
     AVFilterContext *ctx = outlink->src;
     MixContext *s      = ctx->priv;
     int i;
-    char buf[64];
+    char *chlstr;
 
     s->planar          = av_sample_fmt_is_planar(outlink->format);
     s->sample_rate     = outlink->sample_rate;
@@ -241,7 +241,7 @@ static int config_output(AVFilterLink *outlink)
     if (!s->fifos)
         return AVERROR(ENOMEM);
 
-    s->nb_channels = av_get_channel_layout_nb_channels(outlink->channel_layout);
+    s->nb_channels = outlink->ch_layout.nb_channels;
     for (i = 0; i < s->nb_inputs; i++) {
         s->fifos[i] = av_audio_fifo_alloc(outlink->format, s->nb_channels, 1024);
         if (!s->fifos[i])
@@ -260,11 +260,11 @@ static int config_output(AVFilterLink *outlink)
     s->scale_norm = s->active_inputs;
     calculate_scales(s, 0);
 
-    av_get_channel_layout_string(buf, sizeof(buf), -1, outlink->channel_layout);
-
+    chlstr = av_channel_layout_describe(&outlink->ch_layout);
     av_log(ctx, AV_LOG_VERBOSE,
            "inputs:%d fmt:%s srate:%d cl:%s\n", s->nb_inputs,
-           av_get_sample_fmt_name(outlink->format), outlink->sample_rate, buf);
+           av_get_sample_fmt_name(outlink->format), outlink->sample_rate, chlstr);
+    av_free(chlstr);
 
     return 0;
 }
