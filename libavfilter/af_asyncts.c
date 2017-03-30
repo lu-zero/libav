@@ -99,8 +99,14 @@ static int config_props(AVFilterLink *link)
     if (!s->avr)
         return AVERROR(ENOMEM);
 
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     av_opt_set_int(s->avr,  "in_channel_layout", link->channel_layout, 0);
     av_opt_set_int(s->avr, "out_channel_layout", link->channel_layout, 0);
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    av_opt_set_channel_layout(s->avr,  "in_ch_layout", &link->ch_layout, 0);
+    av_opt_set_channel_layout(s->avr, "out_ch_layout", &link->ch_layout, 0);
     av_opt_set_int(s->avr,  "in_sample_fmt",     link->format,         0);
     av_opt_set_int(s->avr, "out_sample_fmt",     link->format,         0);
     av_opt_set_int(s->avr,  "in_sample_rate",    link->sample_rate,    0);
@@ -183,7 +189,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *buf)
     AVFilterContext  *ctx = inlink->dst;
     ASyncContext       *s = ctx->priv;
     AVFilterLink *outlink = ctx->outputs[0];
-    int nb_channels = av_get_channel_layout_nb_channels(buf->channel_layout);
+    int nb_channels = buf->ch_layout.nb_channels;
     int64_t pts = (buf->pts == AV_NOPTS_VALUE) ? buf->pts :
                   av_rescale_q(buf->pts, inlink->time_base, outlink->time_base);
     int out_size, ret;
