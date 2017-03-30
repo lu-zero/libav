@@ -397,7 +397,8 @@ static int pick_format(AVFilterLink *link)
             return AVERROR(EINVAL);
         }
         link->in_channel_layouts->nb_channel_layouts = 1;
-        link->channel_layout = link->in_channel_layouts->channel_layouts[0];
+        av_channel_layout_from_mask(&link->ch_layout,
+                                    link->in_channel_layouts->channel_layouts[0]);
     }
 
     ff_formats_unref(&link->in_formats);
@@ -578,23 +579,33 @@ static void swap_channel_layouts_on_filter(AVFilterContext *filter)
         for (j = 0; j < outlink->in_channel_layouts->nb_channel_layouts; j++) {
             uint64_t  in_chlayout = link->out_channel_layouts->channel_layouts[0];
             uint64_t out_chlayout = outlink->in_channel_layouts->channel_layouts[j];
-            int  in_channels      = av_get_channel_layout_nb_channels(in_chlayout);
-            int out_channels      = av_get_channel_layout_nb_channels(out_chlayout);
-            int count_diff        = out_channels - in_channels;
+            int  in_channels;
+            int out_channels;
+            int count_diff;
             int matched_channels, extra_channels;
             int score = 0;
+            AVChannelLayout  in_ch_layout;
+            AVChannelLayout out_ch_layout;
+
+            av_channel_layout_from_mask( &in_ch_layout,  in_chlayout);
+            av_channel_layout_from_mask(&out_ch_layout, out_chlayout);
+            in_channels  =  in_ch_layout.nb_channels;
+            out_channels = out_ch_layout.nb_channels;
+            count_diff = out_channels - in_channels;
 
             /* channel substitution */
             for (k = 0; k < FF_ARRAY_ELEMS(ch_subst); k++) {
                 uint64_t cmp0 = ch_subst[k][0];
                 uint64_t cmp1 = ch_subst[k][1];
+                AVChannelLayout tmp;
                 if (( in_chlayout & cmp0) && (!(out_chlayout & cmp0)) &&
                     (out_chlayout & cmp1) && (!( in_chlayout & cmp1))) {
                     in_chlayout  &= ~cmp0;
                     out_chlayout &= ~cmp1;
                     /* add score for channel match, minus a deduction for
                        having to do the substitution */
-                    score += 10 * av_get_channel_layout_nb_channels(cmp1) - 2;
+                    av_channel_layout_from_mask(&tmp, cmp1);
+                    score += 10 * tmp.nb_channels - 2;
                 }
             }
 
@@ -605,10 +616,11 @@ static void swap_channel_layouts_on_filter(AVFilterContext *filter)
             in_chlayout  &= ~AV_CH_LOW_FREQUENCY;
             out_chlayout &= ~AV_CH_LOW_FREQUENCY;
 
-            matched_channels = av_get_channel_layout_nb_channels(in_chlayout &
-                                                                 out_chlayout);
-            extra_channels   = av_get_channel_layout_nb_channels(out_chlayout &
-                                                                 (~in_chlayout));
+            av_channel_layout_from_mask( &in_ch_layout,  in_chlayout &  out_chlayout);
+            av_channel_layout_from_mask(&out_ch_layout, out_chlayout & (~in_chlayout));
+
+            matched_channels = in_ch_layout.nb_channels;
+            extra_channels   = out_ch_layout.nb_channels;
             score += 10 * matched_channels - 5 * extra_channels;
 
             if (score > best_score ||

@@ -247,16 +247,15 @@ void ff_dlog_link(void *ctx, AVFilterLink *link, int end)
                 link->dst ? link->dst->filter->name : "",
                 end ? "\n" : "");
     } else {
-        char buf[128];
-        av_get_channel_layout_string(buf, sizeof(buf), -1, link->channel_layout);
-
+        char *chlstr = av_channel_layout_describe(&link->ch_layout);
         av_log(ctx, AV_LOG_TRACE,
                 "link[%p r:%d cl:%s fmt:%-16s %-16s->%-16s]%s",
-                link, link->sample_rate, buf,
+                link, link->sample_rate, chlstr,
                 av_get_sample_fmt_name(link->format),
                 link->src ? link->src->filter->name : "",
                 link->dst ? link->dst->filter->name : "",
                 end ? "\n" : "");
+        av_free(chlstr);
     }
 }
 
@@ -683,7 +682,7 @@ int ff_filter_frame(AVFilterLink *link, AVFrame *frame)
         case AVMEDIA_TYPE_AUDIO:
             av_samples_copy(out->extended_data, frame->extended_data,
                             0, 0, frame->nb_samples,
-                            av_get_channel_layout_nb_channels(frame->channel_layout),
+                            frame->ch_layout.nb_channels,
                             frame->format);
             break;
         default:

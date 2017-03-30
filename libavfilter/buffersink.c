@@ -107,7 +107,7 @@ int attribute_align_arg av_buffersink_get_samples(AVFilterContext *ctx,
     int ret = 0;
 
     if (!s->audio_fifo) {
-        int nb_channels = av_get_channel_layout_nb_channels(link->channel_layout);
+        int nb_channels = link->ch_layout.nb_channels;
         if (!(s->audio_fifo = av_audio_fifo_alloc(link->format, nb_channels, nb_samples)))
             return AVERROR(ENOMEM);
     }

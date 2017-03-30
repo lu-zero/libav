@@ -31,7 +31,7 @@ AVFrame *ff_null_get_audio_buffer(AVFilterLink *link, int nb_samples)
 AVFrame *ff_default_get_audio_buffer(AVFilterLink *link, int nb_samples)
 {
     AVFrame *frame = av_frame_alloc();
-    int channels = av_get_channel_layout_nb_channels(link->channel_layout);
+    int channels = link->ch_layout.nb_channels;
     int ret;
 
     if (!frame)
@@ -39,7 +39,12 @@ AVFrame *ff_default_get_audio_buffer(AVFilterLink *link, int nb_samples)
 
     frame->nb_samples     = nb_samples;
     frame->format         = link->format;
-    frame->channel_layout = link->channel_layout;
+    ret = av_channel_layout_copy(&frame->ch_layout, &link->ch_layout);
+    if (ret < 0) {
+        av_frame_free(&frame);
+        return NULL;
+    }
+
     frame->sample_rate    = link->sample_rate;
     ret = av_frame_get_buffer(frame, 0);
     if (ret < 0) {
