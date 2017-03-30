@@ -25,6 +25,8 @@
  * Memory buffer source API.
  */
 
+#include "libavutil/channel_layout.h"
+
 #include "avfilter.h"
 
 /**
@@ -80,10 +82,18 @@ typedef struct AVBufferSrcParameters {
      */
     int sample_rate;
 
+#if FF_API_OLD_CHANNEL_LAYOUT
+    /**
+     * @deprecated use ch_layout instead
+     */
+    attribute_deprecated
+    uint64_t channel_layout;
+#endif
+
     /**
      * Audio only, the audio channel layout
      */
-    uint64_t channel_layout;
+    AVChannelLayout ch_layout;
 } AVBufferSrcParameters;
 
 /**

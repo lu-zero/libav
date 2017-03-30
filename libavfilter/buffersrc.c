@@ -58,8 +58,7 @@ typedef struct BufferSourceContext {
     int sample_rate;
     enum AVSampleFormat sample_fmt;
     char               *sample_fmt_str;
-    uint64_t channel_layout;
-    char    *channel_layout_str;
+    AVChannelLayout ch_layout;
 
     int got_format_from_params;
     int eof;
@@ -71,9 +70,9 @@ typedef struct BufferSourceContext {
         return AVERROR(EINVAL);\
     }
 
-#define CHECK_AUDIO_PARAM_CHANGE(s, c, srate, ch_layout, format)\
+#define CHECK_AUDIO_PARAM_CHANGE(s, c, srate, chlayout, format)\
     if (c->sample_fmt != format || c->sample_rate != srate ||\
-        c->channel_layout != ch_layout) {\
+        av_channel_layout_compare(&c->ch_layout, &chlayout)) {\
         av_log(s, AV_LOG_ERROR, "Changing frame properties on the fly is not supported.\n");\
         return AVERROR(EINVAL);\
     }
@@ -124,8 +123,15 @@ int av_buffersrc_parameters_set(AVFilterContext *ctx, AVBufferSrcParameters *par
         }
         if (param->sample_rate > 0)
             s->sample_rate = param->sample_rate;
+
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
         if (param->channel_layout)
-            s->channel_layout = param->channel_layout;
+            av_channel_layout_from_mask(&s->ch_layout, param->channel_layout);
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+        if (av_channel_layout_check(&param->ch_layout))
+            av_channel_layout_copy(&s->ch_layout, &param->ch_layout);
         break;
     default:
         return AVERROR_BUG;
@@ -170,7 +176,7 @@ int attribute_align_arg av_buffersrc_add_frame(AVFilterContext *ctx,
                                  frame->format);
         break;
     case AVMEDIA_TYPE_AUDIO:
-        CHECK_AUDIO_PARAM_CHANGE(ctx, s, frame->sample_rate, frame->channel_layout,
+        CHECK_AUDIO_PARAM_CHANGE(ctx, s, frame->sample_rate, frame->ch_layout,
                                  frame->format);
         break;
     default:
@@ -261,7 +267,7 @@ static const AVOption audio_options[] = {
     { "time_base",      NULL, OFFSET(time_base),           AV_OPT_TYPE_RATIONAL, { .dbl = 0 }, 0, INT_MAX, A },
     { "sample_rate",    NULL, OFFSET(sample_rate),         AV_OPT_TYPE_INT,      { .i64 = 0 }, 0, INT_MAX, A },
     { "sample_fmt",     NULL, OFFSET(sample_fmt_str),      AV_OPT_TYPE_STRING,             .flags = A },
-    { "channel_layout", NULL, OFFSET(channel_layout_str),  AV_OPT_TYPE_STRING,             .flags = A },
+    { "channel_layout", NULL, OFFSET(ch_layout),           AV_OPT_TYPE_CHANNEL_LAYOUT,     .flags = A },
     { NULL },
 };
 
@@ -275,6 +281,7 @@ static const AVClass abuffer_class = {
 static av_cold int init_audio(AVFilterContext *ctx)
 {
     BufferSourceContext *s = ctx->priv;
+    char *chlstr;
     int ret = 0;
 
     if (!(s->sample_fmt_str || s->got_format_from_params)) {
@@ -290,24 +297,17 @@ static av_cold int init_audio(AVFilterContext *ctx)
         return AVERROR(EINVAL);
     }
 
-    if (s->channel_layout_str)
-        s->channel_layout = av_get_channel_layout(s->channel_layout_str);
-
-    if (!s->channel_layout) {
-        av_log(ctx, AV_LOG_ERROR, "Invalid channel layout %s.\n",
-               s->channel_layout_str);
-        return AVERROR(EINVAL);
-    }
-
     if (!(s->fifo = av_fifo_alloc(sizeof(AVFrame*))))
         return AVERROR(ENOMEM);
 
     if (!s->time_base.num)
         s->time_base = (AVRational){1, s->sample_rate};
 
+    chlstr = av_channel_layout_describe(&s->ch_layout);
     av_log(ctx, AV_LOG_VERBOSE, "tb:%d/%d samplefmt:%s samplerate: %d "
            "ch layout:%s\n", s->time_base.num, s->time_base.den, s->sample_fmt_str,
-           s->sample_rate, s->channel_layout_str);
+           s->sample_rate, chlstr);
+    av_free(chlstr);
 
     return ret;
 }
@@ -344,7 +344,7 @@ static int query_formats(AVFilterContext *ctx)
         ff_add_format(&samplerates,       c->sample_rate);
         ff_set_common_samplerates(ctx, samplerates);
 
-        ff_add_channel_layout(&channel_layouts, c->channel_layout);
+        ff_add_channel_layout(&channel_layouts, c->ch_layout.u.mask);
         ff_set_common_channel_layouts(ctx, channel_layouts);
         break;
     default:
@@ -371,7 +371,7 @@ static int config_props(AVFilterLink *link)
         }
         break;
     case AVMEDIA_TYPE_AUDIO:
-        link->channel_layout = c->channel_layout;
+        av_channel_layout_copy(&link->ch_layout, &c->ch_layout);
         link->sample_rate    = c->sample_rate;
         break;
     default:
