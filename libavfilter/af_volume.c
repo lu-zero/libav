@@ -228,7 +228,7 @@ static int config_output(AVFilterLink *outlink)
     AVFilterLink *inlink = ctx->inputs[0];
 
     vol->sample_fmt = inlink->format;
-    vol->channels   = av_get_channel_layout_nb_channels(inlink->channel_layout);
+    vol->channels   = inlink->ch_layout.nb_channels;
     vol->planes     = av_sample_fmt_is_planar(inlink->format) ? vol->channels : 1;
 
     volume_init(vol);
