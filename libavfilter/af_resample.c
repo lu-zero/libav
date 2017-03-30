@@ -23,6 +23,7 @@
 
 #include "libavutil/avassert.h"
 #include "libavutil/avstring.h"
+#include "libavutil/channel_layout.h"
 #include "libavutil/common.h"
 #include "libavutil/dict.h"
 #include "libavutil/mathematics.h"
@@ -65,8 +66,14 @@ static av_cold int init(AVFilterContext *ctx, AVDictionary **opts)
         av_dict_set(opts, e->key, NULL, 0);
 
     /* do not allow the user to override basic format options */
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     av_dict_set(&s->options,  "in_channel_layout", NULL, 0);
     av_dict_set(&s->options, "out_channel_layout", NULL, 0);
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    av_dict_set(&s->options,  "in_ch_layout",      NULL, 0);
+    av_dict_set(&s->options, "out_ch_layout",      NULL, 0);
     av_dict_set(&s->options,  "in_sample_fmt",     NULL, 0);
     av_dict_set(&s->options, "out_sample_fmt",     NULL, 0);
     av_dict_set(&s->options,  "in_sample_rate",    NULL, 0);
@@ -115,7 +122,7 @@ static int config_output(AVFilterLink *outlink)
     AVFilterContext *ctx = outlink->src;
     AVFilterLink *inlink = ctx->inputs[0];
     ResampleContext   *s = ctx->priv;
-    char buf1[64], buf2[64];
+    char *chlstr_in, *chlstr_out;
     int ret;
 
     int64_t resampling_forced;
@@ -125,11 +132,11 @@ static int config_output(AVFilterLink *outlink)
         avresample_free(&s->avr);
     }
 
-    if (inlink->channel_layout == outlink->channel_layout &&
+    if (!av_channel_layout_compare(&inlink->ch_layout, &outlink->ch_layout) &&
         inlink->sample_rate    == outlink->sample_rate    &&
         (inlink->format        == outlink->format ||
-        (av_get_channel_layout_nb_channels(inlink->channel_layout)  == 1 &&
-         av_get_channel_layout_nb_channels(outlink->channel_layout) == 1 &&
+        (inlink->ch_layout.nb_channels  == 1 &&
+         outlink->ch_layout.nb_channels == 1 &&
          av_get_planar_sample_fmt(inlink->format) ==
          av_get_planar_sample_fmt(outlink->format))))
         return 0;
@@ -148,8 +155,14 @@ static int config_output(AVFilterLink *outlink)
             return ret;
     }
 
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     av_opt_set_int(s->avr,  "in_channel_layout", inlink ->channel_layout, 0);
     av_opt_set_int(s->avr, "out_channel_layout", outlink->channel_layout, 0);
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    av_opt_set_channel_layout(s->avr,  "in_ch_layout", &inlink ->ch_layout, 0);
+    av_opt_set_channel_layout(s->avr, "out_ch_layout", &outlink->ch_layout, 0);
     av_opt_set_int(s->avr,  "in_sample_fmt",     inlink ->format,         0);
     av_opt_set_int(s->avr, "out_sample_fmt",     outlink->format,         0);
     av_opt_set_int(s->avr,  "in_sample_rate",    inlink ->sample_rate,    0);
@@ -168,14 +181,14 @@ static int config_output(AVFilterLink *outlink)
     } else
         outlink->time_base = inlink->time_base;
 
-    av_get_channel_layout_string(buf1, sizeof(buf1),
-                                 -1, inlink ->channel_layout);
-    av_get_channel_layout_string(buf2, sizeof(buf2),
-                                 -1, outlink->channel_layout);
+    chlstr_in  = av_channel_layout_describe( &inlink->ch_layout);
+    chlstr_out = av_channel_layout_describe(&outlink->ch_layout);
     av_log(ctx, AV_LOG_VERBOSE,
            "fmt:%s srate:%d cl:%s -> fmt:%s srate:%d cl:%s\n",
-           av_get_sample_fmt_name(inlink ->format), inlink ->sample_rate, buf1,
-           av_get_sample_fmt_name(outlink->format), outlink->sample_rate, buf2);
+           av_get_sample_fmt_name(inlink ->format), inlink ->sample_rate, chlstr_in,
+           av_get_sample_fmt_name(outlink->format), outlink->sample_rate, chlstr_out);
+    av_free(chlstr_in);
+    av_free(chlstr_out);
 
     return 0;
 }
