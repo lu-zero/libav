@@ -37,8 +37,8 @@
 typedef struct ChannelMap {
     int input;                ///< input stream index
     int       in_channel_idx; ///< index of in_channel in the input stream data
-    uint64_t  in_channel;     ///< layout describing the input channel
-    uint64_t out_channel;     ///< layout describing the output channel
+    enum AVChannel  in_channel; ///< layout describing the input channel
+    enum AVChannel out_channel; ///< layout describing the output channel
 } ChannelMap;
 
 typedef struct JoinContext {
@@ -46,8 +46,7 @@ typedef struct JoinContext {
 
     int inputs;
     char *map;
-    char    *channel_layout_str;
-    uint64_t channel_layout;
+    AVChannelLayout ch_layout;
 
     int      nb_channels;
     ChannelMap *channels;
@@ -68,7 +67,7 @@ typedef struct JoinContext {
 static const AVOption join_options[] = {
     { "inputs",         "Number of input streams.", OFFSET(inputs),             AV_OPT_TYPE_INT,    { .i64 = 2 }, 1, INT_MAX,       A },
     { "channel_layout", "Channel layout of the "
-                        "output stream.",           OFFSET(channel_layout_str), AV_OPT_TYPE_STRING, {.str = "stereo"}, 0, 0, A },
+                        "output stream.",           OFFSET(ch_layout),          AV_OPT_TYPE_CHANNEL_LAYOUT, {.str = "stereo"}, 0, 0, A },
     { "map",            "A comma-separated list of channels maps in the format "
                         "'input_stream.input_channel-output_channel.",
                                                     OFFSET(map),                AV_OPT_TYPE_STRING,                 .flags = A },
@@ -106,8 +105,13 @@ static int parse_maps(AVFilterContext *ctx)
 
     while (cur && *cur) {
         char *sep, *next, *p;
-        uint64_t in_channel = 0, out_channel = 0;
+        AVChannelLayout in_ch_layout, out_ch_layout;
+        enum AVChannel in_channel, out_channel;
         int input_idx, out_ch_idx, in_ch_idx;
+        int ret;
+
+        av_channel_layout_uninit(&in_ch_layout);
+        av_channel_layout_uninit(&out_ch_layout);
 
         next = strchr(cur, separator);
         if (next)
@@ -122,26 +126,26 @@ static int parse_maps(AVFilterContext *ctx)
         *sep++ = 0;
 
 #define PARSE_CHANNEL(str, var, inout)                                         \
-        if (!(var = av_get_channel_layout(str))) {                             \
+        ret = av_channel_layout_from_string(&var, str);                              \
+        if (ret < 0) {                                                         \
             av_log(ctx, AV_LOG_ERROR, "Invalid " inout " channel: %s.\n", str);\
             return AVERROR(EINVAL);                                            \
         }                                                                      \
-        if (av_get_channel_layout_nb_channels(var) != 1) {                     \
+        if (var.nb_channels != 1) {                                            \
             av_log(ctx, AV_LOG_ERROR, "Channel map describes more than one "   \
                    inout " channel.\n");                                       \
             return AVERROR(EINVAL);                                            \
         }
 
         /* parse output channel */
-        PARSE_CHANNEL(sep, out_channel, "output");
-        if (!(out_channel & s->channel_layout)) {
+        PARSE_CHANNEL(sep, out_ch_layout, "output");
+        out_channel = av_channel_layout_get_channel(&out_ch_layout, 0);
+        out_ch_idx = av_channel_layout_channel_index(&s->ch_layout, out_channel);
+        if (out_ch_idx < 0) {
             av_log(ctx, AV_LOG_ERROR, "Output channel '%s' is not present in "
                    "requested channel layout.\n", sep);
             return AVERROR(EINVAL);
         }
-
-        out_ch_idx = av_get_channel_layout_channel_index(s->channel_layout,
-                                                         out_channel);
         if (s->channels[out_ch_idx].input >= 0) {
             av_log(ctx, AV_LOG_ERROR, "Multiple maps for output channel "
                    "'%s'.\n", sep);
@@ -163,11 +167,12 @@ static int parse_maps(AVFilterContext *ctx)
         if (p == cur) {
             /* channel specifier is not a number,
              * try to parse as channel name */
-            PARSE_CHANNEL(cur, in_channel, "input");
+            PARSE_CHANNEL(cur, in_ch_layout, "input");
+            in_channel = av_channel_layout_get_channel(&in_ch_layout, 0);
         }
 
         s->channels[out_ch_idx].input      = input_idx;
-        if (in_channel)
+        if (av_channel_layout_check(&in_ch_layout))
             s->channels[out_ch_idx].in_channel = in_channel;
         else
             s->channels[out_ch_idx].in_channel_idx = in_ch_idx;
@@ -182,14 +187,7 @@ static av_cold int join_init(AVFilterContext *ctx)
     JoinContext *s = ctx->priv;
     int ret, i;
 
-    if (!(s->channel_layout = av_get_channel_layout(s->channel_layout_str))) {
-        av_log(ctx, AV_LOG_ERROR, "Error parsing channel layout '%s'.\n",
-               s->channel_layout_str);
-        ret = AVERROR(EINVAL);
-        goto fail;
-    }
-
-    s->nb_channels  = av_get_channel_layout_nb_channels(s->channel_layout);
+    s->nb_channels  = s->ch_layout.nb_channels;
     s->channels     = av_mallocz(sizeof(*s->channels) * s->nb_channels);
     s->buffers      = av_mallocz(sizeof(*s->buffers)  * s->nb_channels);
     s->input_frames = av_mallocz(sizeof(*s->input_frames) * s->inputs);
@@ -199,7 +197,7 @@ static av_cold int join_init(AVFilterContext *ctx)
     }
 
     for (i = 0; i < s->nb_channels; i++) {
-        s->channels[i].out_channel = av_channel_layout_extract_channel(s->channel_layout, i);
+        s->channels[i].out_channel = av_channel_layout_get_channel(&s->ch_layout, i);
         s->channels[i].input       = -1;
     }
 
@@ -246,7 +244,7 @@ static int join_query_formats(AVFilterContext *ctx)
     AVFilterChannelLayouts *layouts = NULL;
     int i;
 
-    ff_add_channel_layout(&layouts, s->channel_layout);
+    ff_add_channel_layout(&layouts, s->ch_layout.u.mask);
     ff_channel_layouts_ref(layouts, &ctx->outputs[0]->in_channel_layouts);
 
     for (i = 0; i < ctx->nb_inputs; i++)
@@ -267,7 +265,7 @@ static void guess_map_matching(AVFilterContext *ctx, ChannelMap *ch,
     for (i = 0; i < ctx->nb_inputs; i++) {
         AVFilterLink *link = ctx->inputs[i];
 
-        if (ch->out_channel & link->channel_layout &&
+        if (ch->out_channel & link->ch_layout.u.mask &&
             !(ch->out_channel & inputs[i])) {
             ch->input      = i;
             ch->in_channel = ch->out_channel;
@@ -285,11 +283,14 @@ static void guess_map_any(AVFilterContext *ctx, ChannelMap *ch,
     for (i = 0; i < ctx->nb_inputs; i++) {
         AVFilterLink *link = ctx->inputs[i];
 
-        if ((inputs[i] & link->channel_layout) != link->channel_layout) {
-            uint64_t unused = link->channel_layout & ~inputs[i];
+        if ((inputs[i] & link->ch_layout.u.mask) != link->ch_layout.u.mask) {
+            uint64_t unused = av_channel_layout_subset(&link->ch_layout, ~inputs[i]);
+            AVChannelLayout layout;
+            av_channel_layout_uninit(&layout);
+            av_channel_layout_from_mask(&layout, unused);
 
             ch->input      = i;
-            ch->in_channel = av_channel_layout_extract_channel(unused, 0);
+            ch->in_channel = av_channel_layout_get_channel(&layout, 0);
             inputs[i]     |= ch->in_channel;
             return;
         }
@@ -316,12 +317,12 @@ static int join_config_output(AVFilterLink *outlink)
         inlink = ctx->inputs[ch->input];
 
         if (!ch->in_channel)
-            ch->in_channel = av_channel_layout_extract_channel(inlink->channel_layout,
-                                                               ch->in_channel_idx);
+            ch->in_channel = av_channel_layout_get_channel(&inlink->ch_layout,
+                                                           ch->in_channel_idx);
 
-        if (!(ch->in_channel & inlink->channel_layout)) {
+        if (!(ch->in_channel & inlink->ch_layout.u.mask)) {
             av_log(ctx, AV_LOG_ERROR, "Requested channel %s is not present in "
-                   "input stream #%d.\n", av_get_channel_name(ch->in_channel),
+                   "input stream #%d.\n", av_channel_name(ch->in_channel),
                    ch->input);
             ret = AVERROR(EINVAL);
             goto fail;
@@ -349,12 +350,12 @@ static int join_config_output(AVFilterLink *outlink)
         if (ch->input < 0) {
             av_log(ctx, AV_LOG_ERROR, "Could not find input channel for "
                    "output channel '%s'.\n",
-                   av_get_channel_name(ch->out_channel));
+                   av_channel_name(ch->out_channel));
             goto fail;
         }
 
-        ch->in_channel_idx = av_get_channel_layout_channel_index(ctx->inputs[ch->input]->channel_layout,
-                                                                 ch->in_channel);
+        ch->in_channel_idx = av_channel_layout_channel_index(&ctx->inputs[ch->input]->ch_layout,
+                                                             ch->in_channel);
     }
 
     /* print mappings */
@@ -362,8 +363,8 @@ static int join_config_output(AVFilterLink *outlink)
     for (i = 0; i < s->nb_channels; i++) {
         ChannelMap *ch = &s->channels[i];
         av_log(ctx, AV_LOG_VERBOSE, "%d.%s => %s ", ch->input,
-               av_get_channel_name(ch->in_channel),
-               av_get_channel_name(ch->out_channel));
+               av_channel_name(ch->in_channel),
+               av_channel_name(ch->out_channel));
     }
     av_log(ctx, AV_LOG_VERBOSE, "\n");
 
@@ -468,8 +469,11 @@ static int join_request_frame(AVFilterLink *outlink)
         }
     }
 
+    ret = av_channel_layout_copy(&frame->ch_layout, &outlink->ch_layout);
+    if (ret < 0)
+        goto fail;
+
     frame->nb_samples     = nb_samples;
-    frame->channel_layout = outlink->channel_layout;
     frame->sample_rate    = outlink->sample_rate;
     frame->format         = outlink->format;
     frame->pts            = s->input_frames[0]->pts;
