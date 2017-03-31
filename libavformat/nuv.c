@@ -118,8 +118,7 @@ static int get_codec_data(AVIOContext *pb, AVStream *vst,
                 ast->codecpar->codec_tag             = avio_rl32(pb);
                 ast->codecpar->sample_rate           = avio_rl32(pb);
                 ast->codecpar->bits_per_coded_sample = avio_rl32(pb);
-                ast->codecpar->channels              = avio_rl32(pb);
-                ast->codecpar->channel_layout        = 0;
+                av_channel_layout_default(&ast->codecpar->ch_layout, avio_rl32(pb));
 
                 id = ff_wav_codec_get_id(ast->codecpar->codec_tag,
                                          ast->codecpar->bits_per_coded_sample);
@@ -222,8 +221,7 @@ static int nuv_header(AVFormatContext *s)
 
         ast->codecpar->codec_type            = AVMEDIA_TYPE_AUDIO;
         ast->codecpar->codec_id              = AV_CODEC_ID_PCM_S16LE;
-        ast->codecpar->channels              = 2;
-        ast->codecpar->channel_layout        = AV_CH_LAYOUT_STEREO;
+        ast->codecpar->ch_layout             = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
         ast->codecpar->sample_rate           = 44100;
         ast->codecpar->bit_rate              = 2 * 2 * 44100 * 8;
         ast->codecpar->block_align           = 2 * 2;
