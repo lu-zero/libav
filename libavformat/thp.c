@@ -124,7 +124,7 @@ static int thp_read_header(AVFormatContext *s)
             st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
             st->codecpar->codec_id = AV_CODEC_ID_ADPCM_THP;
             st->codecpar->codec_tag = 0;  /* no fourcc */
-            st->codecpar->channels    = avio_rb32(pb); /* numChannels.  */
+            av_channel_layout_default(&st->codecpar->ch_layout, avio_rb32(pb));
             st->codecpar->sample_rate = avio_rb32(pb); /* Frequency.  */
             st->duration           = avio_rb32(pb);
 
