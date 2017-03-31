@@ -89,9 +89,8 @@ static int flac_write_header(struct AVFormatContext *s)
         return ret;
 
     /* add the channel layout tag */
-    if (par->channel_layout &&
-        !(par->channel_layout & ~0x3ffffULL) &&
-        !ff_flac_is_native_layout(par->channel_layout)) {
+    if (!av_channel_layout_subset(&par->ch_layout, ~0x3ffffULL) &&
+        !ff_flac_is_native_layout(par->ch_layout.u.mask)) {
         AVDictionaryEntry *chmask = av_dict_get(s->metadata, "WAVEFORMATEXTENSIBLE_CHANNEL_MASK",
                                                 NULL, 0);
 
@@ -99,9 +98,9 @@ static int flac_write_header(struct AVFormatContext *s)
             av_log(s, AV_LOG_WARNING, "A WAVEFORMATEXTENSIBLE_CHANNEL_MASK is "
                    "already present, this muxer will not overwrite it.\n");
         } else {
-            uint8_t buf[32];
-            snprintf(buf, sizeof(buf), "0x%"PRIx64, par->channel_layout);
-            av_dict_set(&s->metadata, "WAVEFORMATEXTENSIBLE_CHANNEL_MASK", buf, 0);
+            char *chlstr = av_channel_layout_describe(&par->ch_layout);
+            av_dict_set(&s->metadata, "WAVEFORMATEXTENSIBLE_CHANNEL_MASK", chlstr, 0);
+            av_free(chlstr);
         }
     }
 
