@@ -50,7 +50,7 @@ ff_voc_get_packet(AVFormatContext *s, AVPacket *pkt, AVStream *st, int max_size)
                 if (sample_rate)
                     par->sample_rate = sample_rate;
                 avpriv_set_pts_info(st, 64, 1, par->sample_rate);
-                par->channels = channels;
+                av_channel_layout_default(&par->ch_layout, channels);
                 par->bits_per_coded_sample = av_get_bits_per_sample(par->codec_id);
             } else
                 avio_skip(pb, 1);
@@ -77,7 +77,8 @@ ff_voc_get_packet(AVFormatContext *s, AVPacket *pkt, AVStream *st, int max_size)
                 par->sample_rate = avio_rl32(pb);
                 avpriv_set_pts_info(st, 64, 1, par->sample_rate);
                 par->bits_per_coded_sample = avio_r8(pb);
-                par->channels = avio_r8(pb);
+                channels = avio_r8(pb);
+                av_channel_layout_default(&par->ch_layout, channels);
             } else
                 avio_skip(pb, 6);
             tmp_codec = avio_rl16(pb);
