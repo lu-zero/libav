@@ -194,19 +194,15 @@ static int smacker_read_header(AVFormatContext *s)
             } else {
                 ast[i]->codecpar->codec_id = AV_CODEC_ID_PCM_U8;
             }
-            if (smk->aflags[i] & SMK_AUD_STEREO) {
-                ast[i]->codecpar->channels       = 2;
-                ast[i]->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
-            } else {
-                ast[i]->codecpar->channels       = 1;
-                ast[i]->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
-            }
+            av_channel_layout_default(&ast[i]->codecpar->ch_layout,
+                                      !!(smk->aflags[i] & SMK_AUD_STEREO) + 1);
             ast[i]->codecpar->sample_rate = smk->rates[i];
             ast[i]->codecpar->bits_per_coded_sample = (smk->aflags[i] & SMK_AUD_16BITS) ? 16 : 8;
             if(ast[i]->codecpar->bits_per_coded_sample == 16 && ast[i]->codecpar->codec_id == AV_CODEC_ID_PCM_U8)
                 ast[i]->codecpar->codec_id = AV_CODEC_ID_PCM_S16LE;
             avpriv_set_pts_info(ast[i], 64, 1, ast[i]->codecpar->sample_rate
-                    * ast[i]->codecpar->channels * ast[i]->codecpar->bits_per_coded_sample / 8);
+                    * ast[i]->codecpar->ch_layout.nb_channels
+                    * ast[i]->codecpar->bits_per_coded_sample / 8);
         }
     }
 
