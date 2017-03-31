@@ -111,7 +111,7 @@ static int au_read_header(AVFormatContext *s)
     st->codecpar->codec_type  = AVMEDIA_TYPE_AUDIO;
     st->codecpar->codec_tag   = id;
     st->codecpar->codec_id    = codec;
-    st->codecpar->channels    = channels;
+    av_channel_layout_default(&st->codecpar->ch_layout, channels);
     st->codecpar->sample_rate = rate;
     st->codecpar->bit_rate    = channels * rate * bps;
     st->codecpar->block_align = channels * bps >> 3;
@@ -167,7 +167,7 @@ static int put_au_header(AVIOContext *pb, AVCodecParameters *par)
     avio_wb32(pb, AU_UNKNOWN_SIZE);             /* data size */
     avio_wb32(pb, par->codec_tag);              /* codec ID */
     avio_wb32(pb, par->sample_rate);
-    avio_wb32(pb, par->channels);
+    avio_wb32(pb, par->ch_layout.nb_channels);
 
     return 0;
 }
