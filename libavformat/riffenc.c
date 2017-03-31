@@ -65,7 +65,8 @@ int ff_put_wav_header(AVFormatContext *s, AVIOContext *pb,
      * for indicating packet duration. */
     frame_size = av_get_audio_frame_duration2(par, par->block_align);
 
-    waveformatextensible = (par->channels > 2 && par->channel_layout) ||
+    waveformatextensible = (av_channel_layout_check(&par->ch_layout) &&
+                            par->ch_layout.nb_channels > 2) ||
                            par->sample_rate > 48000 ||
                            av_get_bits_per_sample(par->codec_id) > 16;
 
@@ -74,7 +75,7 @@ int ff_put_wav_header(AVFormatContext *s, AVIOContext *pb,
     else
         avio_wl16(pb, par->codec_tag);
 
-    avio_wl16(pb, par->channels);
+    avio_wl16(pb, par->ch_layout.nb_channels);
     avio_wl32(pb, par->sample_rate);
     if (par->codec_id == AV_CODEC_ID_MP2 ||
         par->codec_id == AV_CODEC_ID_MP3 ||
@@ -104,7 +105,7 @@ int ff_put_wav_header(AVFormatContext *s, AVIOContext *pb,
     } else if (par->block_align != 0) { /* specified by the codec */
         blkalign = par->block_align;
     } else
-        blkalign = bps * par->channels / av_gcd(8, bps);
+        blkalign = bps * par->ch_layout.nb_channels / av_gcd(8, bps);
     if (par->codec_id == AV_CODEC_ID_PCM_U8 ||
         par->codec_id == AV_CODEC_ID_PCM_S24LE ||
         par->codec_id == AV_CODEC_ID_PCM_S32LE ||
@@ -132,7 +133,7 @@ int ff_put_wav_header(AVFormatContext *s, AVIOContext *pb,
         /* dwHeadBitrate */
         bytestream_put_le32(&riff_extradata, par->bit_rate);
         /* fwHeadMode */
-        bytestream_put_le16(&riff_extradata, par->channels == 2 ? 1 : 8);
+        bytestream_put_le16(&riff_extradata, par->ch_layout.nb_channels == 2 ? 1 : 8);
         /* fwHeadModeExt */
         bytestream_put_le16(&riff_extradata, 0);
         /* wHeadEmphasis */
@@ -161,7 +162,7 @@ int ff_put_wav_header(AVFormatContext *s, AVIOContext *pb,
         /* ValidBitsPerSample || SamplesPerBlock || Reserved */
         avio_wl16(pb, bps);
         /* dwChannelMask */
-        avio_wl32(pb, par->channel_layout);
+        avio_wl32(pb, par->ch_layout.u.mask);
         /* GUID + next 3 */
         avio_wl32(pb, par->codec_tag);
         avio_wl32(pb, 0x00100000);
