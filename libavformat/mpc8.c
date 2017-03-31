@@ -246,7 +246,7 @@ static int mpc8_read_header(AVFormatContext *s)
     st->codecpar->extradata = av_mallocz(st->codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
     avio_read(pb, st->codecpar->extradata, st->codecpar->extradata_size);
 
-    st->codecpar->channels = (st->codecpar->extradata[1] >> 4) + 1;
+    av_channel_layout_default(&st->codecpar->ch_layout, (st->codecpar->extradata[1] >> 4) + 1);
     st->codecpar->sample_rate = mpc8_rate[st->codecpar->extradata[0] >> 5];
     avpriv_set_pts_info(st, 32, 1152  << (st->codecpar->extradata[1]&3)*2, st->codecpar->sample_rate);
     st->start_time = 0;
