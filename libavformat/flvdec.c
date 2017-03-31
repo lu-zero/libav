@@ -480,10 +480,7 @@ static int amf_parse_object(AVFormatContext *s, AVStream *astream,
                     } else if (!strcmp(key, "audiosamplesize") && apar) {
                         apar->bits_per_coded_sample = num_val;
                     } else if (!strcmp(key, "stereo") && apar) {
-                        apar->channels       = num_val + 1;
-                        apar->channel_layout = apar->channels == 2 ?
-                                               AV_CH_LAYOUT_STEREO :
-                                               AV_CH_LAYOUT_MONO;
+                        av_channel_layout_default(&apar->ch_layout, num_val + 1);
                     } else if (!strcmp(key, "width") && vpar) {
                         vpar->width = num_val;
                     } else if (!strcmp(key, "height") && vpar) {
@@ -876,12 +873,10 @@ skip:
         sample_rate = 44100 << ((flags & FLV_AUDIO_SAMPLERATE_MASK) >>
                                 FLV_AUDIO_SAMPLERATE_OFFSET) >> 3;
         bits_per_coded_sample = (flags & FLV_AUDIO_SAMPLESIZE_MASK) ? 16 : 8;
-        if (!st->codecpar->channels || !st->codecpar->sample_rate ||
+        if (!av_channel_layout_check(&st->codecpar->ch_layout) ||
+            !st->codecpar->sample_rate ||
             !st->codecpar->bits_per_coded_sample) {
-            st->codecpar->channels              = channels;
-            st->codecpar->channel_layout        = channels == 1
-                                               ? AV_CH_LAYOUT_MONO
-                                               : AV_CH_LAYOUT_STEREO;
+            av_channel_layout_default(&st->codecpar->ch_layout, channels);
             st->codecpar->sample_rate           = sample_rate;
             st->codecpar->bits_per_coded_sample = bits_per_coded_sample;
         }
@@ -891,7 +886,7 @@ skip:
             flv->last_sample_rate =
             sample_rate           = st->codecpar->sample_rate;
             flv->last_channels    =
-            channels              = st->codecpar->channels;
+            channels              = st->codecpar->ch_layout.nb_channels;
         } else {
             AVCodecParameters *par = avcodec_parameters_alloc();
             if (!par) {
@@ -941,14 +936,18 @@ skip:
 
                 avpriv_mpeg4audio_get_config(&cfg, st->codecpar->extradata,
                                              st->codecpar->extradata_size * 8, 1);
+                av_channel_layout_default(&st->codecpar->ch_layout, cfg.channels);
+                // or should it be UNORDERED?
+                /*
                 st->codecpar->channels       = cfg.channels;
                 st->codecpar->channel_layout = 0;
+                */
                 if (cfg.ext_sample_rate)
                     st->codecpar->sample_rate = cfg.ext_sample_rate;
                 else
                     st->codecpar->sample_rate = cfg.sample_rate;
                 av_log(s, AV_LOG_TRACE, "mp4a config channels %d sample rate %d\n",
-                       st->codecpar->channels, st->codecpar->sample_rate);
+                       st->codecpar->ch_layout.nb_channels, st->codecpar->sample_rate);
             }
 
             ret = AVERROR(EAGAIN);

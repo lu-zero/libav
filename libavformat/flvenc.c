@@ -86,7 +86,7 @@ static int get_audio_flags(AVFormatContext *s, AVCodecParameters *par)
                    "flv only supports wideband (16kHz) Speex audio\n");
             return -1;
         }
-        if (par->channels != 1) {
+        if (par->ch_layout.nb_channels != 1) {
             av_log(s, AV_LOG_ERROR, "flv only supports mono Speex audio\n");
             return -1;
         }
@@ -117,7 +117,7 @@ static int get_audio_flags(AVFormatContext *s, AVCodecParameters *par)
         }
     }
 
-    if (par->channels > 1)
+    if (par->ch_layout.nb_channels > 1)
         flags |= FLV_STEREO;
 
     switch (par->codec_id) {
@@ -261,7 +261,7 @@ static void write_metadata(AVFormatContext *s, unsigned int ts)
         put_amf_double(pb, flv->audio_par->codec_id == AV_CODEC_ID_PCM_U8 ? 8 : 16);
 
         put_amf_string(pb, "stereo");
-        put_amf_bool(pb, flv->audio_par->channels == 2);
+        put_amf_bool(pb, flv->audio_par->ch_layout.nb_channels == 2);
 
         put_amf_string(pb, "audiocodecid");
         put_amf_double(pb, flv->audio_par->codec_tag);
