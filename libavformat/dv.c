@@ -255,8 +255,7 @@ static int dv_extract_audio_info(DVDemuxContext *c, uint8_t *frame)
             c->audio_pkt[i].flags       |= AV_PKT_FLAG_KEY;
         }
         c->ast[i]->codecpar->sample_rate    = dv_audio_frequency[freq];
-        c->ast[i]->codecpar->channels       = 2;
-        c->ast[i]->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
+        c->ast[i]->codecpar->ch_layout      = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
         c->ast[i]->codecpar->bit_rate       = 2 * dv_audio_frequency[freq] * 16;
         c->ast[i]->start_time            = 0;
     }

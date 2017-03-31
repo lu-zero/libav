@@ -331,7 +331,7 @@ static DVMuxContext* dv_init_mux(AVFormatContext* s)
     for (i=0; i<c->n_ast; i++) {
         if (c->ast[i] && (c->ast[i]->codecpar->codec_id    != AV_CODEC_ID_PCM_S16LE ||
                           c->ast[i]->codecpar->sample_rate != 48000 ||
-                          c->ast[i]->codecpar->channels    != 2))
+                          c->ast[i]->codecpar->ch_layout.nb_channels != 2))
             goto bail_out;
     }
     c->sys = av_dv_codec_profile(vst->codecpar->width, vst->codecpar->height, vst->codecpar->format);
