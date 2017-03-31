@@ -73,7 +73,7 @@ static av_cold int MPA_encode_init(AVCodecContext *avctx)
     MpegAudioContext *s = avctx->priv_data;
     int freq = avctx->sample_rate;
     int bitrate = avctx->bit_rate;
-    int channels = avctx->channels;
+    int channels = avctx->ch_layout.nb_channels;
     int i, v, table;
     float a;
 
@@ -760,8 +760,17 @@ AVCodec ff_mp2_encoder = {
     .supported_samplerates = (const int[]){
         44100, 48000,  32000, 22050, 24000, 16000, 0
     },
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     .channel_layouts       = (const uint64_t[]){ AV_CH_LAYOUT_MONO,
                                                  AV_CH_LAYOUT_STEREO,
                                                  0 },
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    .ch_layouts            = (const AVChannelLayout[]){
+        AV_CHANNEL_LAYOUT_MONO,
+        AV_CHANNEL_LAYOUT_STEREO,
+        { 0 },
+    },
     .defaults              = mp2_defaults,
 };

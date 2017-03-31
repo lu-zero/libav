@@ -80,7 +80,7 @@ static int mpegaudio_parse(AVCodecParserContext *s1,
 
                     if (s->header_count > 0) {
                         avctx->sample_rate= sr;
-                        avctx->channels   = channels;
+                        av_channel_layout_default(&avctx->ch_layout, channels);
                         s1->duration      = frame_size;
                         if (s->no_bitrate || !avctx->bit_rate) {
                             s->no_bitrate = 1;
