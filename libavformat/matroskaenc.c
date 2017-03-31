@@ -485,9 +485,8 @@ static int put_wv_codecpriv(AVIOContext *pb, AVCodecParameters *par)
 static int put_flac_codecpriv(AVFormatContext *s,
                               AVIOContext *pb, AVCodecParameters *par)
 {
-    int write_comment = (par->channel_layout &&
-                         !(par->channel_layout & ~0x3ffffULL) &&
-                         !ff_flac_is_native_layout(par->channel_layout));
+    int write_comment = (!av_channel_layout_subset(&par->ch_layout, ~0x3ffffULL) &&
+                         !ff_flac_is_native_layout(par->ch_layout.u.mask));
     int ret = ff_flac_write_header(pb, par->extradata, par->extradata_size,
                                    !write_comment);
 
@@ -498,11 +497,13 @@ static int put_flac_codecpriv(AVFormatContext *s,
         const char *vendor = (s->flags & AVFMT_FLAG_BITEXACT) ?
                              "Libav" : LIBAVFORMAT_IDENT;
         AVDictionary *dict = NULL;
-        uint8_t buf[32], *data, *p;
+        uint8_t *data, *p;
+        char *chlstr;
         int len;
 
-        snprintf(buf, sizeof(buf), "0x%"PRIx64, par->channel_layout);
-        av_dict_set(&dict, "WAVEFORMATEXTENSIBLE_CHANNEL_MASK", buf, 0);
+        chlstr = av_channel_layout_describe(&par->ch_layout);
+        av_dict_set(&dict, "WAVEFORMATEXTENSIBLE_CHANNEL_MASK", chlstr, 0);
+        av_free(chlstr);
 
         len = ff_vorbiscomment_length(dict, vendor);
         data = av_malloc(len + 4);
@@ -993,7 +994,7 @@ static int mkv_write_track(AVFormatContext *s, MatroskaMuxContext *mkv,
             put_ebml_string(pb, MATROSKA_ID_CODECID, "A_MS/ACM");
 
         subinfo = start_ebml_master(pb, MATROSKA_ID_TRACKAUDIO, 0);
-        put_ebml_uint  (pb, MATROSKA_ID_AUDIOCHANNELS    , par->channels);
+        put_ebml_uint(pb, MATROSKA_ID_AUDIOCHANNELS, par->ch_layout.nb_channels);
 
         mkv->tracks[i].sample_rate_offset = avio_tell(pb);
         put_ebml_float (pb, MATROSKA_ID_AUDIOSAMPLINGFREQ, sample_rate);

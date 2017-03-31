@@ -1539,7 +1539,7 @@ static int matroska_parse_flac(AVFormatContext *s,
                     av_log(s, AV_LOG_WARNING,
                            "Invalid value of WAVEFORMATEXTENSIBLE_CHANNEL_MASK\n");
                 } else
-                    st->codecpar->channel_layout = mask;
+                    av_channel_layout_from_mask(&st->codecpar->ch_layout, mask);
             }
             av_dict_free(&dict);
         }
@@ -2031,7 +2031,7 @@ static int matroska_parse_tracks(AVFormatContext *s)
         } else if (track->type == MATROSKA_TRACK_TYPE_AUDIO) {
             st->codecpar->codec_type  = AVMEDIA_TYPE_AUDIO;
             st->codecpar->sample_rate = track->audio.out_samplerate;
-            st->codecpar->channels    = track->audio.channels;
+            av_channel_layout_default(&st->codecpar->ch_layout, track->audio.channels);
             if (st->codecpar->codec_id != AV_CODEC_ID_AAC)
                 st->need_parsing = AVSTREAM_PARSE_HEADERS;
             if (st->codecpar->codec_id == AV_CODEC_ID_MP3)
