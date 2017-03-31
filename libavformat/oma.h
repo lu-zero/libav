@@ -23,6 +23,8 @@
 
 #include <stdint.h>
 
+#include "libavutil/channel_layout.h"
+
 #include "internal.h"
 
 #define EA3_HEADER_SIZE 96
@@ -41,7 +43,6 @@ extern const uint16_t ff_oma_srate_tab[8];
 
 extern const AVCodecTag ff_oma_codec_tags[];
 
-extern const uint64_t ff_oma_chid_to_native_layout[7];
-extern const int ff_oma_chid_to_num_channels[7];
+extern const AVChannelLayout ff_oma_chid_to_native_layout[7];
 
 #endif /* AVFORMAT_OMA_H */

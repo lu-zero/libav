@@ -366,8 +366,7 @@ static int oma_read_header(AVFormatContext *s)
         /* get stereo coding mode, 1 for joint-stereo */
         jsflag = (codec_params >> 17) & 1;
 
-        st->codecpar->channels    = 2;
-        st->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
+        st->codecpar->ch_layout   = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
         st->codecpar->sample_rate = samplerate;
         st->codecpar->bit_rate    = st->codecpar->sample_rate * framesize * 8 / 1024;
 
@@ -395,8 +394,8 @@ static int oma_read_header(AVFormatContext *s)
                    "Invalid ATRAC-X channel id: %"PRIu32"\n", channel_id);
             return AVERROR_INVALIDDATA;
         }
-        st->codecpar->channel_layout = ff_oma_chid_to_native_layout[channel_id - 1];
-        st->codecpar->channels       = ff_oma_chid_to_num_channels[channel_id - 1];
+        av_channel_layout_copy(&st->codecpar->ch_layout,
+                               &ff_oma_chid_to_native_layout[channel_id - 1]);
         framesize = ((codec_params & 0x3FF) * 8) + 8;
         samplerate = ff_oma_srate_tab[(codec_params >> 13) & 7] * 100;
         if (!samplerate) {
@@ -413,8 +412,7 @@ static int oma_read_header(AVFormatContext *s)
         break;
     case OMA_CODECID_LPCM:
         /* PCM 44.1 kHz 16 bit stereo big-endian */
-        st->codecpar->channels = 2;
-        st->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
+        st->codecpar->ch_layout   = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
         st->codecpar->sample_rate = 44100;
         framesize = 1024;
         /* bit rate = sample rate x PCM block align (= 4) x 8 */

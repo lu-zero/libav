@@ -34,15 +34,12 @@ const AVCodecTag ff_oma_codec_tags[] = {
 };
 
 /** map ATRAC-X channel id to internal channel layout */
-const uint64_t ff_oma_chid_to_native_layout[7] = {
-    AV_CH_LAYOUT_MONO,
-    AV_CH_LAYOUT_STEREO,
-    AV_CH_LAYOUT_SURROUND,
-    AV_CH_LAYOUT_4POINT0,
-    AV_CH_LAYOUT_5POINT1_BACK,
-    AV_CH_LAYOUT_6POINT1_BACK,
-    AV_CH_LAYOUT_7POINT1
+const AVChannelLayout ff_oma_chid_to_native_layout[7] = {
+    AV_CHANNEL_LAYOUT_MONO,
+    AV_CHANNEL_LAYOUT_STEREO,
+    AV_CHANNEL_LAYOUT_SURROUND,
+    AV_CHANNEL_LAYOUT_4POINT0,
+    AV_CHANNEL_LAYOUT_5POINT1_BACK,
+    AV_CHANNEL_LAYOUT_6POINT1_BACK,
+    AV_CHANNEL_LAYOUT_7POINT1
 };
-
-/** map ATRAC-X channel id to total number of channels */
-const int ff_oma_chid_to_num_channels[7] = {1, 2, 3, 4, 6, 7, 8};
