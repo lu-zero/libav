@@ -161,7 +161,7 @@ static void mp3_write_xing(AVFormatContext *s)
         return;
     }
 
-    switch (par->channels) {
+    switch (par->ch_layout.nb_channels) {
     case 1:  channels = MPA_MONO;                                          break;
     case 2:  channels = MPA_STEREO;                                        break;
     default: av_log(s, AV_LOG_WARNING, "Unsupported number of channels, "
