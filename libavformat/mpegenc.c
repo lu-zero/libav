@@ -365,12 +365,12 @@ static av_cold int mpeg_mux_init(AVFormatContext *ctx)
                 }
                 if (j == 4)
                     goto fail;
-                if (st->codecpar->channels > 8)
+                if (st->codecpar->ch_layout.nb_channels > 8)
                     return -1;
                 stream->lpcm_header[0] = 0x0c;
-                stream->lpcm_header[1] = (st->codecpar->channels - 1) | (j << 4);
+                stream->lpcm_header[1] = (st->codecpar->ch_layout.nb_channels - 1) | (j << 4);
                 stream->lpcm_header[2] = 0x80;
-                stream->lpcm_align     = st->codecpar->channels * 2;
+                stream->lpcm_align     = st->codecpar->ch_layout.nb_channels * 2;
             } else {
                 stream->id = mpa_id++;
             }
