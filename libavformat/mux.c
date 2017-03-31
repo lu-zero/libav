@@ -140,7 +140,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 goto fail;
             }
             if (!par->block_align)
-                par->block_align = par->channels *
+                par->block_align = par->ch_layout.nb_channels *
                                    av_get_bits_per_sample(par->codec_id) >> 3;
             break;
         case AVMEDIA_TYPE_VIDEO:

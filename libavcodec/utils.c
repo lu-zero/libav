@@ -1359,7 +1359,7 @@ int av_get_audio_frame_duration(AVCodecContext *avctx, int frame_bytes)
 int av_get_audio_frame_duration2(AVCodecParameters *par, int frame_bytes)
 {
     return get_audio_frame_duration(par->codec_id, par->sample_rate,
-                                    par->channels, par->block_align,
+                                    par->ch_layout.nb_channels, par->block_align,
                                     par->codec_tag, par->bits_per_coded_sample,
                                     frame_bytes);
 }
@@ -1652,6 +1652,7 @@ int avcodec_parameters_copy(AVCodecParameters *dst, const AVCodecParameters *src
 int avcodec_parameters_from_context(AVCodecParameters *par,
                                     const AVCodecContext *codec)
 {
+    int ret;
     codec_parameters_reset(par);
 
     par->codec_type = codec->codec_type;
@@ -1677,10 +1678,18 @@ int avcodec_parameters_from_context(AVCodecParameters *par,
         par->sample_aspect_ratio = codec->sample_aspect_ratio;
         break;
     case AVMEDIA_TYPE_AUDIO:
-        par->format          = codec->sample_fmt;
-        //TODO update AVCodecParameters
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+        if (codec->channel_layout)
+            av_channel_layout_from_mask(&codec->ch_layout, codec->channel_layout);
         par->channel_layout  = codec->channel_layout;
         par->channels        = codec->channels;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+        ret = av_channel_layout_copy(&par->ch_layout, &codec->ch_layout);
+        if (ret < 0)
+            return ret;
+        par->format          = codec->sample_fmt;
         par->sample_rate     = codec->sample_rate;
         par->block_align     = codec->block_align;
         par->initial_padding = codec->initial_padding;
@@ -1701,6 +1710,8 @@ int avcodec_parameters_from_context(AVCodecParameters *par,
 int avcodec_parameters_to_context(AVCodecContext *codec,
                                   const AVCodecParameters *par)
 {
+    int ret;
+
     codec->codec_type = par->codec_type;
     codec->codec_id   = par->codec_id;
     codec->codec_tag  = par->codec_tag;
@@ -1724,10 +1735,18 @@ int avcodec_parameters_to_context(AVCodecContext *codec,
         codec->sample_aspect_ratio    = par->sample_aspect_ratio;
         break;
     case AVMEDIA_TYPE_AUDIO:
-        codec->sample_fmt      = par->format;
-        //TODO update AVCodecParameters
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+        if (par->channel_layout)
+            av_channel_layout_from_mask(&par->ch_layout, par->channel_layout);
         codec->channel_layout  = par->channel_layout;
         codec->channels        = par->channels;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+        ret = av_channel_layout_copy(&codec->ch_layout, &par->ch_layout);
+        if (ret < 0)
+            return ret;
+        codec->sample_fmt      = par->format;
         codec->sample_rate     = par->sample_rate;
         codec->block_align     = par->block_align;
         codec->initial_padding = par->initial_padding;

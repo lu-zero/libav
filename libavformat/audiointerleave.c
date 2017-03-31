@@ -52,7 +52,7 @@ int ff_audio_interleave_init(AVFormatContext *s,
         AudioInterleaveContext *aic = st->priv_data;
 
         if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-            aic->sample_size = (st->codecpar->channels *
+            aic->sample_size = (st->codecpar->ch_layout.nb_channels *
                                 av_get_bits_per_sample(st->codecpar->codec_id)) / 8;
             if (!aic->sample_size) {
                 av_log(s, AV_LOG_ERROR, "could not compute sample size\n");

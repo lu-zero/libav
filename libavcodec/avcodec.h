@@ -3227,16 +3227,22 @@ typedef struct AVCodecParameters {
     enum AVColorSpace                  color_space;
     enum AVChromaLocation              chroma_location;
 
+#if FF_API_OLD_CHANNEL_LAYOUT
     /**
      * Audio only. The channel layout bitmask. May be 0 if the channel layout is
      * unknown or unspecified, otherwise the number of bits set must be equal to
      * the channels field.
+     * @deprecated use ch_layout
      */
+    attribute_deprecated
     uint64_t channel_layout;
     /**
      * Audio only. The number of audio channels.
+     * @deprecated use ch_layout.nb_channels
      */
+    attribute_deprecated
     int      channels;
+#endif
     /**
      * Audio only. The number of audio samples per second.
      */
@@ -3263,6 +3269,11 @@ typedef struct AVCodecParameters {
      * audio without any trailing padding.
      */
     int trailing_padding;
+
+    /**
+     * Audio only. The channel layout and number of channels.
+     */
+    AVChannelLayout ch_layout;
 } AVCodecParameters;
 
 /**
