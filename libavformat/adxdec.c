@@ -40,7 +40,7 @@ static int adx_read_packet(AVFormatContext *s, AVPacket *pkt)
     AVCodecParameters *par = s->streams[0]->codecpar;
     int ret, size;
 
-    size = BLOCK_SIZE * par->channels;
+    size = BLOCK_SIZE * par->ch_layout.nb_channels;
 
     pkt->pos = avio_tell(s->pb);
     pkt->stream_index = 0;
@@ -65,6 +65,7 @@ static int adx_read_header(AVFormatContext *s)
 {
     ADXDemuxerContext *c = s->priv_data;
     AVCodecParameters *par;
+    int channels;
 
     AVStream *st = avformat_new_stream(s, NULL);
     if (!st)
@@ -89,11 +90,12 @@ static int adx_read_header(AVFormatContext *s)
         av_log(s, AV_LOG_ERROR, "Invalid extradata size.\n");
         return AVERROR_INVALIDDATA;
     }
-    par->channels    = AV_RB8 (par->extradata + 7);
+    channels = AV_RB8 (par->extradata + 7);
+    av_channel_layout_default(&par->ch_layout, channels);
     par->sample_rate = AV_RB32(par->extradata + 8);
 
-    if (par->channels <= 0) {
-        av_log(s, AV_LOG_ERROR, "invalid number of channels %d\n", par->channels);
+    if (channels <= 0) {
+        av_log(s, AV_LOG_ERROR, "invalid number of channels %d\n", channels);
         return AVERROR_INVALIDDATA;
     }
 
