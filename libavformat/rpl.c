@@ -182,14 +182,17 @@ static int rpl_read_header(AVFormatContext *s)
     // samples, though. This code will ignore additional tracks.
     audio_format = read_line_and_int(pb, &error);  // audio format ID
     if (audio_format) {
+        int channels;
         ast = avformat_new_stream(s, NULL);
         if (!ast)
             return AVERROR(ENOMEM);
         ast->codecpar->codec_type      = AVMEDIA_TYPE_AUDIO;
         ast->codecpar->codec_tag       = audio_format;
         ast->codecpar->sample_rate     = read_line_and_int(pb, &error);  // audio bitrate
-        ast->codecpar->channels        = read_line_and_int(pb, &error);  // number of audio channels
+        channels                       = read_line_and_int(pb, &error);  // number of audio channels
         ast->codecpar->bits_per_coded_sample = read_line_and_int(pb, &error);  // audio bits per sample
+        av_channel_layout_default(&ast->codecpar->ch_layout, channels);
+
         // At least one sample uses 0 for ADPCM, which is really 4 bits
         // per sample.
         if (ast->codecpar->bits_per_coded_sample == 0)
@@ -197,7 +200,7 @@ static int rpl_read_header(AVFormatContext *s)
 
         ast->codecpar->bit_rate = ast->codecpar->sample_rate *
                                   ast->codecpar->bits_per_coded_sample *
-                                  ast->codecpar->channels;
+                                  channels;
 
         ast->codecpar->codec_id = AV_CODEC_ID_NONE;
         switch (audio_format) {
