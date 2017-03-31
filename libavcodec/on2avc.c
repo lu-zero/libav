@@ -801,6 +801,7 @@ static int on2avc_decode_subframe(On2AVCContext *c, const uint8_t *buf,
 {
     BitstreamContext bc;
     int i, ret;
+    int channels = c->avctx->ch_layout.nb_channels;
 
     bitstream_init8(&bc, buf, buf_size);
     if (bitstream_read_bit(&bc)) {
@@ -809,7 +810,7 @@ static int on2avc_decode_subframe(On2AVCContext *c, const uint8_t *buf,
     }
     c->prev_window_type = c->window_type;
     c->window_type      = bitstream_read(&bc, 3);
-    if (c->window_type >= WINDOW_TYPE_EXT4 && c->avctx->channels == 1) {
+    if (c->window_type >= WINDOW_TYPE_EXT4 && channels == 1) {
         av_log(c->avctx, AV_LOG_ERROR, "stereo mode window for mono audio\n");
         return AVERROR_INVALIDDATA;
     }
@@ -824,13 +825,13 @@ static int on2avc_decode_subframe(On2AVCContext *c, const uint8_t *buf,
         c->grouping[i] = !bitstream_read_bit(&bc);
 
     on2avc_read_ms_info(c, &bc);
-    for (i = 0; i < c->avctx->channels; i++)
+    for (i = 0; i < channels; i++)
         if ((ret = on2avc_read_channel_data(c, &bc, i)) < 0)
             return AVERROR_INVALIDDATA;
-    if (c->avctx->channels == 2 && c->ms_present)
+    if (channels == 2 && c->ms_present)
         on2avc_apply_ms(c);
     if (c->window_type < WINDOW_TYPE_EXT4) {
-        for (i = 0; i < c->avctx->channels; i++)
+        for (i = 0; i < channels; i++)
             on2avc_reconstruct_channel(c, i, dst, offset);
     } else {
         on2avc_reconstruct_stereo(c, dst, offset);
@@ -917,19 +918,17 @@ static av_cold int on2avc_decode_init(AVCodecContext *avctx)
 
     c->avctx = avctx;
     avctx->sample_fmt     = AV_SAMPLE_FMT_FLTP;
-    avctx->channel_layout = (avctx->channels == 2) ? AV_CH_LAYOUT_STEREO
-                                                   : AV_CH_LAYOUT_MONO;
 
     c->is_av500 = (avctx->codec_tag == 0x500);
-    if (c->is_av500 && avctx->channels == 2) {
+    if (c->is_av500 && avctx->ch_layout.nb_channels == 2) {
         av_log(avctx, AV_LOG_ERROR, "0x500 version should be mono\n");
         return AVERROR_INVALIDDATA;
     }
-    if (avctx->channels > 2) {
+    if (avctx->ch_layout.nb_channels > 2) {
         av_log(avctx, AV_LOG_ERROR, "Only 1 or 2 channels are supported.\n");
         return AVERROR(EINVAL);
     }
-    if (avctx->channels == 2)
+    if (avctx->ch_layout.nb_channels == 2)
         av_log(avctx, AV_LOG_WARNING,
                "Stereo mode support is not good, patch is welcome\n");
 
@@ -938,7 +937,7 @@ static av_cold int on2avc_decode_init(AVCodecContext *avctx)
     for (; i < 128; i++)
         c->scale_tab[i] = ceil(pow(10.0, i * 0.1) * 0.5);
 
-    if (avctx->sample_rate < 32000 || avctx->channels == 1)
+    if (avctx->sample_rate < 32000 || avctx->ch_layout.nb_channels == 1)
         memcpy(c->long_win, ff_on2avc_window_long_24000,
                1024 * sizeof(*c->long_win));
     else
