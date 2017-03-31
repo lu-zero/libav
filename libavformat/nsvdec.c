@@ -611,7 +611,7 @@ null_chunk_retry:
                     st[NSV_ST_AUDIO]->codecpar->codec_id = AV_CODEC_ID_PCM_U8;
                 samplerate /= 4;/* UGH ??? XXX */
                 channels = 1;
-                st[NSV_ST_AUDIO]->codecpar->channels = channels;
+                av_channel_layout_default(&st[NSV_ST_AUDIO]->codecpar->ch_layout, channels);
                 st[NSV_ST_AUDIO]->codecpar->sample_rate = samplerate;
                 av_log(s, AV_LOG_TRACE, "NSV RAWAUDIO: bps %"PRIu8", nchan %"PRIu8", srate %"PRIu16"\n",
                        bps, channels, samplerate);
