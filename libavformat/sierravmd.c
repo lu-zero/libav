@@ -133,13 +133,7 @@ static int vmd_read_header(AVFormatContext *s)
         st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
         st->codecpar->codec_id   = AV_CODEC_ID_VMDAUDIO;
         st->codecpar->codec_tag  = 0;  /* no fourcc */
-        if (vmd->vmd_header[811] & 0x80) {
-            st->codecpar->channels       = 2;
-            st->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
-        } else {
-            st->codecpar->channels       = 1;
-            st->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
-        }
+        av_channel_layout_default(&st->codecpar->ch_layout, (vmd->vmd_header[811] & 0x80) + 1);
         st->codecpar->sample_rate = vmd->sample_rate;
         st->codecpar->block_align = AV_RL16(&vmd->vmd_header[806]);
         if (st->codecpar->block_align & 0x8000) {
@@ -149,11 +143,11 @@ static int vmd_read_header(AVFormatContext *s)
             st->codecpar->bits_per_coded_sample = 8;
         }
         st->codecpar->bit_rate = st->codecpar->sample_rate *
-            st->codecpar->bits_per_coded_sample * st->codecpar->channels;
+            st->codecpar->bits_per_coded_sample * st->codecpar->ch_layout.nb_channels;
 
         /* calculate pts */
         num = st->codecpar->block_align;
-        den = st->codecpar->sample_rate * st->codecpar->channels;
+        den = st->codecpar->sample_rate * st->codecpar->ch_layout.nb_channels;
         av_reduce(&den, &num, den, num, (1UL<<31)-1);
         avpriv_set_pts_info(vst, 33, num, den);
         avpriv_set_pts_info(st, 33, num, den);
