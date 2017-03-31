@@ -61,7 +61,7 @@ static int read_desc_chunk(AVFormatContext *s)
     AVIOContext *pb = s->pb;
     CafContext *caf = s->priv_data;
     AVStream *st;
-    int flags;
+    int flags, channels;
 
     /* new audio stream */
     st = avformat_new_stream(s, NULL);
@@ -76,8 +76,10 @@ static int read_desc_chunk(AVFormatContext *s)
     caf->bytes_per_packet  = avio_rb32(pb);
     st->codecpar->block_align = caf->bytes_per_packet;
     caf->frames_per_packet = avio_rb32(pb);
-    st->codecpar->channels    = avio_rb32(pb);
+    channels = avio_rb32(pb);
     st->codecpar->bits_per_coded_sample = avio_rb32(pb);
+
+    av_channel_layout_default(&st->codecpar->ch_layout, channels);
 
     /* calculate bit rate for constant size packets */
     if (caf->frames_per_packet > 0 && caf->bytes_per_packet > 0) {
