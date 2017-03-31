@@ -122,8 +122,7 @@ static int iff_read_header(AVFormatContext *s)
     if (!st)
         return AVERROR(ENOMEM);
 
-    st->codecpar->channels = 1;
-    st->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
+    st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
     avio_skip(pb, 8);
     // codec_tag used by ByteRun1 decoder to distinguish progressive (PBM) and interlaced (ILBM) content
     st->codecpar->codec_tag = avio_rl32(pb);
@@ -159,11 +158,9 @@ static int iff_read_header(AVFormatContext *s)
             if (data_size < 4)
                 return AVERROR_INVALIDDATA;
             if (avio_rb32(pb) < 6) {
-                st->codecpar->channels       = 1;
-                st->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
+                st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
             } else {
-                st->codecpar->channels       = 2;
-                st->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
+                st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
             }
             break;
 
@@ -249,8 +246,11 @@ static int iff_read_header(AVFormatContext *s)
         }
 
         st->codecpar->bits_per_coded_sample = 8;
-        st->codecpar->bit_rate    = st->codecpar->channels * st->codecpar->sample_rate * st->codecpar->bits_per_coded_sample;
-        st->codecpar->block_align = st->codecpar->channels * st->codecpar->bits_per_coded_sample;
+        st->codecpar->bit_rate    = st->codecpar->ch_layout.nb_channels *
+                                    st->codecpar->sample_rate *
+                                    st->codecpar->bits_per_coded_sample;
+        st->codecpar->block_align = st->codecpar->ch_layout.nb_channels *
+                                    st->codecpar->bits_per_coded_sample;
         break;
 
     case AVMEDIA_TYPE_VIDEO:
