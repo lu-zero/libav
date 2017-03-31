@@ -500,13 +500,13 @@ static int ea_read_header(AVFormatContext *s)
         st->codecpar->codec_type            = AVMEDIA_TYPE_AUDIO;
         st->codecpar->codec_id              = ea->audio_codec;
         st->codecpar->codec_tag             = 0;   /* no tag */
-        st->codecpar->channels              = ea->num_channels;
+        av_channel_layout_default(&st->codecpar->ch_layout, ea->num_channels);
         st->codecpar->sample_rate           = ea->sample_rate;
         st->codecpar->bits_per_coded_sample = ea->bytes * 8;
-        st->codecpar->bit_rate              = st->codecpar->channels *
+        st->codecpar->bit_rate              = ea->num_channels *
                                               st->codecpar->sample_rate *
                                               st->codecpar->bits_per_coded_sample / 4;
-        st->codecpar->block_align           = st->codecpar->channels *
+        st->codecpar->block_align           = ea->num_channels *
                                               st->codecpar->bits_per_coded_sample;
         ea->audio_stream_index           = st->index;
         st->start_time                   = 0;
