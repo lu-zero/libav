@@ -77,7 +77,8 @@ int ff_rtp_get_codec_info(AVCodecParameters *par, int payload_type)
                 par->codec_type = rtp_payload_types[i].codec_type;
                 par->codec_id = rtp_payload_types[i].codec_id;
                 if (rtp_payload_types[i].audio_channels > 0)
-                    par->channels = rtp_payload_types[i].audio_channels;
+                    av_channel_layout_default(&par->ch_layout,
+                                              rtp_payload_types[i].audio_channels);
                 if (rtp_payload_types[i].clock_rate > 0)
                     par->sample_rate = rtp_payload_types[i].clock_rate;
                 return 0;
@@ -110,13 +111,13 @@ int ff_rtp_get_payload_type(AVFormatContext *fmt,
             /* G722 has 8000 as nominal rate even if the sample rate is 16000,
              * see section 4.5.2 in RFC 3551. */
             if (par->codec_id == AV_CODEC_ID_ADPCM_G722 &&
-                par->sample_rate == 16000 && par->channels == 1)
+                par->sample_rate == 16000 && par->ch_layout.nb_channels == 1)
                 return rtp_payload_types[i].pt;
             if (par->codec_type == AVMEDIA_TYPE_AUDIO &&
                 ((rtp_payload_types[i].clock_rate > 0 &&
                   par->sample_rate != rtp_payload_types[i].clock_rate) ||
                  (rtp_payload_types[i].audio_channels > 0 &&
-                  par->channels != rtp_payload_types[i].audio_channels)))
+                  par->ch_layout.nb_channels != rtp_payload_types[i].audio_channels)))
                 continue;
             return rtp_payload_types[i].pt;
         }
