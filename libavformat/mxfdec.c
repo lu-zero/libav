@@ -320,15 +320,16 @@ static int mxf_get_d10_aes3_packet(AVIOContext *pb, AVStream *st, AVPacket *pkt,
     data_ptr = pkt->data;
     end_ptr = pkt->data + length;
     buf_ptr = pkt->data + 4; /* skip SMPTE 331M header */
-    for (; end_ptr - buf_ptr >= st->codecpar->channels * 4; ) {
-        for (i = 0; i < st->codecpar->channels; i++) {
+    for (; end_ptr - buf_ptr >= st->codecpar->ch_layout.nb_channels * 4; ) {
+        for (i = 0; i < st->codecpar->ch_layout.nb_channels; i++) {
             uint32_t sample = bytestream_get_le32(&buf_ptr);
             if (st->codecpar->bits_per_coded_sample == 24)
                 bytestream_put_le24(&data_ptr, (sample >> 4) & 0xffffff);
             else
                 bytestream_put_le16(&data_ptr, (sample >> 12) & 0xffff);
         }
-        buf_ptr += 32 - st->codecpar->channels*4; // always 8 channels stored SMPTE 331M
+        // always 8 channels stored SMPTE 331M
+        buf_ptr += 32 - st->codecpar->ch_layout.nb_channels * 4;
     }
     av_shrink_packet(pkt, data_ptr - pkt->data);
     return 0;
@@ -1609,7 +1610,7 @@ static int mxf_parse_structural_metadata(MXFContext *mxf)
             container_ul = mxf_get_codec_ul(mxf_sound_essence_container_uls, essence_container_ul);
             if (st->codecpar->codec_id == AV_CODEC_ID_NONE)
                 st->codecpar->codec_id = container_ul->id;
-            st->codecpar->channels = descriptor->channels;
+            av_channel_layout_default(&st->codecpar->ch_layout, descriptor->channels);
             st->codecpar->bits_per_coded_sample = descriptor->bits_per_sample;
 
             if (descriptor->sample_rate.den > 0) {
@@ -2326,10 +2327,10 @@ static int mxf_set_audio_pts(MXFContext *mxf, AVCodecParameters *par,
 
     pkt->pts = track->sample_count;
 
-    if (par->channels <= 0 || par->channels * bits_per_sample < 8)
+    if (par->ch_layout.nb_channels <= 0 || par->ch_layout.nb_channels * bits_per_sample < 8)
         return AVERROR_INVALIDDATA;
 
-    track->sample_count += pkt->size / (par->channels * bits_per_sample / 8);
+    track->sample_count += pkt->size / (par->ch_layout.nb_channels * bits_per_sample / 8);
     return 0;
 }
 

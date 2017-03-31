@@ -889,7 +889,7 @@ static void mxf_write_generic_sound_common(AVFormatContext *s, AVStream *st, con
     avio_wb32(pb, 1);
 
     mxf_write_local_tag(pb, 4, 0x3D07);
-    avio_wb32(pb, st->codecpar->channels);
+    avio_wb32(pb, st->codecpar->ch_layout.nb_channels);
 
     mxf_write_local_tag(pb, 4, 0x3D01);
     avio_wb32(pb, av_get_bits_per_sample(st->codecpar->codec_id));
@@ -1654,10 +1654,10 @@ static void mxf_write_d10_audio_packet(AVFormatContext *s, AVStream *st, AVPacke
 
     avio_w8(pb, (frame_size == 1920 ? 0 : (mxf->edit_units_count-1) % 5 + 1));
     avio_wl16(pb, frame_size);
-    avio_w8(pb, (1<<st->codecpar->channels)-1);
+    avio_w8(pb, (1 << st->codecpar->ch_layout.nb_channels)-1);
 
     while (samples < end) {
-        for (i = 0; i < st->codecpar->channels; i++) {
+        for (i = 0; i < st->codecpar->ch_layout.nb_channels; i++) {
             uint32_t sample;
             if (st->codecpar->codec_id == AV_CODEC_ID_PCM_S24LE) {
                 sample = AV_RL24(samples)<< 4;
