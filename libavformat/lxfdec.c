@@ -277,7 +277,7 @@ static int lxf_read_header(AVFormatContext *s)
 
         st->codecpar->codec_type  = AVMEDIA_TYPE_AUDIO;
         st->codecpar->sample_rate = LXF_SAMPLERATE;
-        st->codecpar->channels    = lxf->channels;
+        av_channel_layout_default(&st->codecpar->ch_layout, lxf->channels);
 
         avpriv_set_pts_info(st, 64, 1, st->codecpar->sample_rate);
     }
