@@ -68,7 +68,7 @@ static int aiff_write_header(AVFormatContext *s)
     /* Common chunk */
     ffio_wfourcc(pb, "COMM");
     avio_wb32(pb, aifc ? 24 : 18); /* size */
-    avio_wb16(pb, par->channels);  /* Number of channels */
+    avio_wb16(pb, par->ch_layout.nb_channels);  /* Number of channels */
 
     aiff->frames = avio_tell(pb);
     avio_wb32(pb, 0);              /* Number of frames */
@@ -80,7 +80,7 @@ static int aiff_write_header(AVFormatContext *s)
         return -1;
     }
     if (!par->block_align)
-        par->block_align = (par->bits_per_coded_sample * par->channels) >> 3;
+        par->block_align = (par->bits_per_coded_sample * par->ch_layout.nb_channels) >> 3;
 
     avio_wb16(pb, par->bits_per_coded_sample); /* Sample size */
 
