@@ -296,7 +296,8 @@ static int vorbis_header(AVFormatContext *s, int idx)
         if (bytestream_get_le32(&p) != 0) /* vorbis_version */
             return AVERROR_INVALIDDATA;
 
-        st->codecpar->channels = bytestream_get_byte(&p);
+        av_channel_layout_default(&st->codecpar->ch_layout,
+                                  bytestream_get_byte(&p));
         srate               = bytestream_get_le32(&p);
         p += 4; // skip maximum bitrate
         st->codecpar->bit_rate = bytestream_get_le32(&p); // nominal bitrate

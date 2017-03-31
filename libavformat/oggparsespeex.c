@@ -59,17 +59,17 @@ static int speex_header(AVFormatContext *s, int idx) {
 
     if (spxp->seq == 0) {
         int frames_per_packet;
+        int channels;
         st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
         st->codecpar->codec_id = AV_CODEC_ID_SPEEX;
 
         st->codecpar->sample_rate = AV_RL32(p + 36);
-        st->codecpar->channels = AV_RL32(p + 48);
-        if (st->codecpar->channels < 1 || st->codecpar->channels > 2) {
+        channels = AV_RL32(p + 48);
+        if (channels < 1 || channels > 2) {
             av_log(s, AV_LOG_ERROR, "invalid channel count. Speex must be mono or stereo.\n");
             return AVERROR_INVALIDDATA;
         }
-        st->codecpar->channel_layout = st->codecpar->channels == 1 ? AV_CH_LAYOUT_MONO :
-                                                                     AV_CH_LAYOUT_STEREO;
+        av_channel_layout_default(&st->codecpar->ch_layout, channels);
 
         spxp->packet_size  = AV_RL32(p + 56);
         frames_per_packet  = AV_RL32(p + 64);
