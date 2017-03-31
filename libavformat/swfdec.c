@@ -207,13 +207,7 @@ static int swf_read_packet(AVFormatContext *s, AVPacket *pkt)
             if (!ast)
                 return -1;
             ast->id = -1; /* -1 to avoid clash with video stream ch_id */
-            if (v & 1) {
-                ast->codecpar->channels       = 2;
-                ast->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
-            } else {
-                ast->codecpar->channels       = 1;
-                ast->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
-            }
+            av_channel_layout_default(&ast->codecpar->ch_layout, !!(v & 1) + 1);
             ast->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
             ast->codecpar->codec_id = ff_codec_get_id(swf_audio_codec_tags, (v>>4) & 15);
             ast->need_parsing = AVSTREAM_PARSE_FULL;
