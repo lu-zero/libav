@@ -476,7 +476,7 @@ int ff_mp4_read_dec_config_descr(AVFormatContext *fc, AVStream *st, AVIOContext 
             MPEG4AudioConfig cfg;
             avpriv_mpeg4audio_get_config(&cfg, st->codecpar->extradata,
                                          st->codecpar->extradata_size * 8, 1);
-            st->codecpar->channels = cfg.channels;
+            av_channel_layout_default(&st->codecpar->ch_layout, cfg.channels);
             if (cfg.object_type == 29 && cfg.sampling_index < 3) // old mp3on4
                 st->codecpar->sample_rate = avpriv_mpa_freq_tab[cfg.sampling_index];
             else if (cfg.ext_sample_rate)
@@ -484,7 +484,7 @@ int ff_mp4_read_dec_config_descr(AVFormatContext *fc, AVStream *st, AVIOContext 
             else
                 st->codecpar->sample_rate = cfg.sample_rate;
             av_log(fc, AV_LOG_TRACE, "mp4a config channels %d obj %d ext obj %d "
-                    "sample rate %d ext sample rate %d\n", st->codecpar->channels,
+                    "sample rate %d ext sample rate %d\n", cfg.channels,
                     cfg.object_type, cfg.ext_object_type,
                     cfg.sample_rate, cfg.ext_sample_rate);
             if (!(st->codecpar->codec_id = ff_codec_get_id(mp4_audio_types,
