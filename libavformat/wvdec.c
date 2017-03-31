@@ -230,8 +230,7 @@ static int wv_read_header(AVFormatContext *s)
         return AVERROR(ENOMEM);
     st->codecpar->codec_type            = AVMEDIA_TYPE_AUDIO;
     st->codecpar->codec_id              = AV_CODEC_ID_WAVPACK;
-    st->codecpar->channels              = wc->chan;
-    st->codecpar->channel_layout        = wc->chmask;
+    av_channel_layout_from_mask(&st->codecpar->ch_layout, wc->chmask);
     st->codecpar->sample_rate           = wc->rate;
     st->codecpar->bits_per_coded_sample = wc->bpp;
     avpriv_set_pts_info(st, 64, 1, wc->rate);
