@@ -75,8 +75,6 @@
 
 #define FF_DEFAULT_QUANT_BIAS 999999
 
-#define FF_SANE_NB_CHANNELS 63U
-
 #define FF_SIGNBIT(x) (x >> CHAR_BIT * sizeof(x) - 1)
 
 typedef struct FramePool {

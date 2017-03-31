@@ -18,6 +18,7 @@
 
 #include "libavutil/channel_layout.h"
 #include "libavutil/common.h"
+#include "libavutil/internal.h"
 
 #include "audio.h"
 #include "avfilter.h"
@@ -44,7 +45,23 @@ AVFrame *ff_default_get_audio_buffer(AVFilterLink *link, int nb_samples)
         av_frame_free(&frame);
         return NULL;
     }
-
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    /* set the deprecated channel_layout field for callers
+     * that didn't update to the new API yet */
+    if (frame->ch_layout.nb_channels > FF_SANE_NB_CHANNELS) {
+        av_frame_free(&frame);
+        return NULL;
+    }
+    if (frame->ch_layout.order == AV_CHANNEL_ORDER_NATIVE)
+        frame->channel_layout = frame->ch_layout.u.mask;
+    else {
+        frame->channel_layout = av_get_default_channel_layout(frame->ch_layout.nb_channels);
+        if (!frame->channel_layout)
+            frame->channel_layout = (1ULL << frame->ch_layout.nb_channels) - 1;
+    }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
     frame->sample_rate    = link->sample_rate;
     ret = av_frame_get_buffer(frame, 0);
     if (ret < 0) {

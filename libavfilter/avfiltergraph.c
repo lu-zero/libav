@@ -399,6 +399,11 @@ static int pick_format(AVFilterLink *link)
         link->in_channel_layouts->nb_channel_layouts = 1;
         av_channel_layout_from_mask(&link->ch_layout,
                                     link->in_channel_layouts->channel_layouts[0]);
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+        link->channel_layout = link->in_channel_layouts->channel_layouts[0];
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
     }
 
     ff_formats_unref(&link->in_formats);

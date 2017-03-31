@@ -226,4 +226,6 @@ int avpriv_open(const char *filename, int flags, ...);
 
 int avpriv_set_systematic_pal2(uint32_t pal[256], enum AVPixelFormat pix_fmt);
 
+#define FF_SANE_NB_CHANNELS 63U
+
 #endif /* AVUTIL_INTERNAL_H */
