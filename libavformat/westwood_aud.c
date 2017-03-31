@@ -120,9 +120,7 @@ static int wsaud_read_header(AVFormatContext *s)
     }
     avpriv_set_pts_info(st, 64, 1, sample_rate);
     st->codecpar->codec_type  = AVMEDIA_TYPE_AUDIO;
-    st->codecpar->channels    = channels;
-    st->codecpar->channel_layout = channels == 1 ? AV_CH_LAYOUT_MONO :
-                                                   AV_CH_LAYOUT_STEREO;
+    av_channel_layout_default(&st->codecpar->ch_layout, channels);
     st->codecpar->sample_rate = sample_rate;
 
     return 0;
@@ -167,7 +165,7 @@ static int wsaud_read_packet(AVFormatContext *s,
             return AVERROR(EIO);
 
         /* 2 samples/byte, 1 or 2 samples per frame depending on stereo */
-        pkt->duration = (chunk_size * 2) / st->codecpar->channels;
+        pkt->duration = (chunk_size * 2) / st->codecpar->ch_layout.nb_channels;
     }
     pkt->stream_index = st->index;
 
