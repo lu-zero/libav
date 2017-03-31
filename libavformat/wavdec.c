@@ -328,10 +328,10 @@ break_loop:
 
     avio_seek(pb, data_ofs, SEEK_SET);
 
-    if (!sample_count && st->codecpar->channels &&
+    if (!sample_count && st->codecpar->ch_layout.nb_channels &&
         av_get_bits_per_sample(st->codecpar->codec_id))
         sample_count = (data_size << 3) /
-                       (st->codecpar->channels *
+                       (st->codecpar->ch_layout.nb_channels *
                         (uint64_t)av_get_bits_per_sample(st->codecpar->codec_id));
     if (sample_count)
         st->duration = sample_count;
