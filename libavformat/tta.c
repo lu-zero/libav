@@ -109,7 +109,7 @@ static int tta_read_header(AVFormatContext *s)
 
     st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
     st->codecpar->codec_id = AV_CODEC_ID_TTA;
-    st->codecpar->channels = channels;
+    av_channel_layout_default(&st->codecpar->ch_layout, channels);
     st->codecpar->sample_rate = samplerate;
     st->codecpar->bits_per_coded_sample = bps;
 
