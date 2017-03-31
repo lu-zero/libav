@@ -121,8 +121,7 @@ static int get_sindex(AVFormatContext *s, int id, int format) {
         case 9:
             st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
             st->codecpar->codec_id = AV_CODEC_ID_PCM_S24LE;
-            st->codecpar->channels = 1;
-            st->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
+            st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
             st->codecpar->sample_rate = 48000;
             st->codecpar->bit_rate = 3 * 1 * 48000 * 8;
             st->codecpar->block_align = 3 * 1;
@@ -131,8 +130,7 @@ static int get_sindex(AVFormatContext *s, int id, int format) {
         case 10:
             st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
             st->codecpar->codec_id = AV_CODEC_ID_PCM_S16LE;
-            st->codecpar->channels = 1;
-            st->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
+            st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
             st->codecpar->sample_rate = 48000;
             st->codecpar->bit_rate = 2 * 1 * 48000 * 8;
             st->codecpar->block_align = 2 * 1;
@@ -141,8 +139,7 @@ static int get_sindex(AVFormatContext *s, int id, int format) {
         case 17:
             st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
             st->codecpar->codec_id = AV_CODEC_ID_AC3;
-            st->codecpar->channels = 2;
-            st->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
+            st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
             st->codecpar->sample_rate = 48000;
             break;
         // timecode tracks:
