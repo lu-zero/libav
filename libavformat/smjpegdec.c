@@ -91,7 +91,7 @@ static int smjpeg_read_header(AVFormatContext *s)
             ast->codecpar->codec_type  = AVMEDIA_TYPE_AUDIO;
             ast->codecpar->sample_rate = avio_rb16(pb);
             ast->codecpar->bits_per_coded_sample = avio_r8(pb);
-            ast->codecpar->channels    = avio_r8(pb);
+            av_channel_layout_default(&ast->codecpar->ch_layout, avio_r8(pb));
             ast->codecpar->codec_tag   = avio_rl32(pb);
             ast->codecpar->codec_id    = ff_codec_get_id(ff_codec_smjpeg_audio_tags,
                                                          ast->codecpar->codec_tag);
