@@ -390,6 +390,10 @@ int av_frame_make_writable(AVFrame *frame)
     ret = av_channel_layout_copy(&tmp.ch_layout, &frame->ch_layout);
     if (ret < 0)
         return ret;
+#if FF_API_OLD_CHANNEL_LAYOUT
+    if (!frame->ch_layout.nb_channels)
+        av_channel_layout_from_mask(&tmp.ch_layout, frame->channel_layout);
+#endif
 
     ret = av_frame_copy(&tmp, frame);
     if (ret < 0) {
