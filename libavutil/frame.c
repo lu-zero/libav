@@ -584,12 +584,18 @@ static int frame_copy_video(AVFrame *dst, const AVFrame *src)
 static int frame_copy_audio(AVFrame *dst, const AVFrame *src)
 {
     int planar   = av_sample_fmt_is_planar(dst->format);
-    int channels = av_get_channel_layout_nb_channels(dst->channel_layout);
+    int channels = dst->ch_layout.nb_channels;
     int planes   = planar ? channels : 1;
     int i;
 
+    if (!channels)
+        channels = av_get_channel_layout_nb_channels(dst->channel_layout);
+
     if (dst->nb_samples     != src->nb_samples ||
-        dst->channel_layout != src->channel_layout)
+#if FF_API_OLD_CHANNEL_LAYOUT
+        dst->channel_layout != src->channel_layout ||
+#endif
+        av_channel_layout_compare(&dst->ch_layout, &src->ch_layout))
         return AVERROR(EINVAL);
 
     for (i = 0; i < planes; i++)
