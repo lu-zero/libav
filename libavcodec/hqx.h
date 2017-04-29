@@ -27,6 +27,7 @@
 #include "libavutil/mem.h"
 
 #include "bitstream.h"
+#include "vlc.h"
 #include "hqxdsp.h"
 
 enum HQXACMode {

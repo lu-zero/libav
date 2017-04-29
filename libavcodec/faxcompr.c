@@ -28,6 +28,7 @@
 #include "bitstream.h"
 #include "put_bits.h"
 #include "faxcompr.h"
+#include "vlc.h"
 
 #define CCITT_SYMS 104
 

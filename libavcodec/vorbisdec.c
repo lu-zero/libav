@@ -35,6 +35,7 @@
 #include "vorbis.h"
 #include "vorbisdsp.h"
 #include "xiph.h"
+#include "vlc.h"
 
 #define V_NB_BITS 8
 #define V_NB_BITS2 11

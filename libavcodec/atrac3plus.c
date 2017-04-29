@@ -31,6 +31,7 @@
 #include "bitstream.h"
 #include "atrac3plus.h"
 #include "atrac3plus_data.h"
+#include "vlc.h"
 
 static VLC_TYPE tables_data[154276][2];
 static VLC wl_vlc_tabs[4];
