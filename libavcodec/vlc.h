@@ -65,8 +65,8 @@ void ff_free_vlc(VLC *vlc);
     } while (0)
 
 /* Return the LUT element for the given bitstream configuration. */
-static inline int set_idx(BitstreamContext *bc, int code, int *n, int *nb_bits,
-                          VLC_TYPE (*table)[2])
+static av_always_inline int set_idx(BitstreamContext *bc, int code, int *n, int *nb_bits,
+                                    VLC_TYPE (*table)[2])
 {
     unsigned idx;
 
@@ -87,8 +87,8 @@ static inline int set_idx(BitstreamContext *bc, int code, int *n, int *nb_bits,
  * If the VLC code is invalid and max_depth = 1, then no bits will be removed.
  * If the VLC code is invalid and max_depth > 1, then the number of bits removed
  * is undefined. */
-static inline int bitstream_read_vlc(BitstreamContext *bc, VLC_TYPE (*table)[2],
-                                     int bits, int max_depth)
+static av_always_inline int bitstream_read_vlc(BitstreamContext *bc, VLC_TYPE (*table)[2],
+                                               int bits, int max_depth)
 {
     int nb_bits;
     unsigned idx = bitstream_peek(bc, bits);
