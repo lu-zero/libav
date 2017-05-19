@@ -392,6 +392,55 @@ static int hls_setup(AVFormatContext *s)
     return 0;
 }
 
+static int read_chomp_line(AVIOContext *s, char *buf, int maxlen)
+{
+    int len = ff_get_line(s, buf, maxlen);
+    while (len > 0 && av_isspace(buf[len - 1]))
+        buf[--len] = '\0';
+    return len;
+}
+
+static int hls_recover(AVFormatContext *s)
+{
+    HLSContext *hls = s->priv_data;
+    char line[1024];
+    AVIOContext *io;
+    const char *ptr;
+    int ret, is_segment = 0;
+    int64_t duration = 0;
+
+    ret = s->io_open(s, &io, s->filename, AVIO_FLAG_READ, NULL);
+    if (ret == AVERROR(ENOENT)) {
+        hls->start_sequence = 0;
+        hls->sequence = 0;
+        return 0;
+    }
+
+    read_chomp_line(io, line, sizeof(line));
+    if (strcmp(line, "#EXTM3U")) {
+        return AVERROR_INVALIDDATA;
+    }
+
+    while (!io->eof_reached) {
+        read_chomp_line(io, line, sizeof(line));
+        if (av_strstart(line, "#EXT-X-MEDIA-SEQUENCE:", &ptr)) {
+            hls->sequence = hls->start_sequence = atoi(ptr);
+        } else if (av_strstart(line, "#EXTINF:", &ptr)) {
+            is_segment = 1;
+            duration   = atof(ptr) * AV_TIME_BASE;
+        } else if (av_strstart(line, "#", NULL)) {
+            continue;
+        } else if (line[0]) {
+            if (is_segment) {
+                append_entry(hls, duration, av_basename(line));
+                is_segment = 0;
+            }
+        }
+    }
+
+    return 0;
+}
+
 static int hls_write_header(AVFormatContext *s)
 {
     HLSContext *hls = s->priv_data;
@@ -416,6 +465,10 @@ static int hls_write_header(AVFormatContext *s)
         ret = AVERROR_MUXER_NOT_FOUND;
         goto fail;
     }
+
+    if (hls->start_sequence < 0)
+        if ((ret = hls_recover(s)) < 0)
+            goto fail;
 
     if ((ret = hls_setup(s)) < 0)
         goto fail;
@@ -511,7 +564,8 @@ static int hls_write_trailer(struct AVFormatContext *s)
 #define OFFSET(x) offsetof(HLSContext, x)
 #define E AV_OPT_FLAG_ENCODING_PARAM
 static const AVOption options[] = {
-    {"start_number",  "first number in the sequence",            OFFSET(start_sequence),AV_OPT_TYPE_INT64,  {.i64 = 0},     0, INT64_MAX, E},
+    {"start_number",  "first number in the sequence",            OFFSET(start_sequence),AV_OPT_TYPE_INT64,  {.i64 = 0},     -1, INT64_MAX, E, "start_number"},
+    {"recover", "If there is already a m3u8 file in the path, populate the sequence from it", 0, AV_OPT_TYPE_CONST, {.i64 = -1}, 0, 0, E, "start_number"},
     {"hls_time",      "segment length in seconds",               OFFSET(time),    AV_OPT_TYPE_FLOAT,  {.dbl = 2},     0, FLT_MAX, E},
     {"hls_list_size", "maximum number of playlist entries",      OFFSET(size),    AV_OPT_TYPE_INT,    {.i64 = 5},     0, INT_MAX, E},
     {"hls_wrap",      "number after which the index wraps",      OFFSET(wrap),    AV_OPT_TYPE_INT,    {.i64 = 0},     0, INT_MAX, E},
