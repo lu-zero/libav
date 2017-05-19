@@ -201,14 +201,14 @@ static int hls_mux_init(AVFormatContext *s)
     return 0;
 }
 
-static int append_entry(HLSContext *hls, int64_t duration)
+static int append_entry(HLSContext *hls, int64_t duration, const char *name)
 {
     ListEntry *en = av_malloc(sizeof(*en));
 
     if (!en)
         return AVERROR(ENOMEM);
 
-    av_strlcpy(en->name, av_basename(hls->avf->filename), sizeof(en->name));
+    av_strlcpy(en->name, name, sizeof(en->name));
 
     en->duration = duration;
     en->next     = NULL;
@@ -465,7 +465,7 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
         hls->duration = pts - hls->end_pts;
 
     if (can_split && pts - hls->start_pts >= end_pts) {
-        ret = append_entry(hls, hls->duration);
+        ret = append_entry(hls, hls->duration, av_basename(hls->avf->filename));
         if (ret)
             return ret;
 
@@ -500,7 +500,7 @@ static int hls_write_trailer(struct AVFormatContext *s)
     ff_format_io_close(s, &oc->pb);
     avformat_free_context(oc);
     av_free(hls->basename);
-    append_entry(hls, hls->duration);
+    append_entry(hls, hls->duration, av_basename(hls->avf->filename));
     hls_window(s, 1);
 
     free_entries(hls);
