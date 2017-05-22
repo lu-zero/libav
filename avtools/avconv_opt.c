@@ -64,11 +64,9 @@ const HWAccel hwaccels[] = {
     { "d3d11va", hwaccel_decode_init, HWACCEL_D3D11VA, AV_PIX_FMT_D3D11,
       AV_HWDEVICE_TYPE_D3D11VA },
 #endif
-#if HAVE_DXVA2_LIB
+#if CONFIG_DXVA2
     { "dxva2", hwaccel_decode_init, HWACCEL_DXVA2, AV_PIX_FMT_DXVA2_VLD,
       AV_HWDEVICE_TYPE_DXVA2 },
-    { "dxva2-old", dxva2_init, HWACCEL_DXVA2_OLD, AV_PIX_FMT_DXVA2_VLD,
-      AV_HWDEVICE_TYPE_NONE },
 #endif
 #if CONFIG_VDA
     { "vda",   vda_init,   HWACCEL_VDA,   AV_PIX_FMT_VDA,

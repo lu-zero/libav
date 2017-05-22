@@ -1713,7 +1713,6 @@ HAVE_LIST="
     $TOOLCHAIN_FEATURES
     $TYPES_LIST
     dos_paths
-    dxva2_lib
     libc_msvcrt
     MMAL_PARAMETER_VIDEO_MAX_NUM_CALLBACKS
     sdl
@@ -2167,7 +2166,6 @@ zmbv_encoder_deps="zlib"
 # hardware accelerators
 d3d11va_deps="d3d11_h dxva_h ID3D11VideoDecoder"
 dxva2_deps="dxva2api_h DXVA2_ConfigPictureDecode ole32"
-dxva2_lib_deps="dxva2"
 vda_deps="VideoDecodeAcceleration_VDADecoder_h blocks_extension pthreads"
 vda_extralibs="-framework CoreFoundation -framework VideoDecodeAcceleration -framework QuartzCore"
 
@@ -2553,7 +2551,7 @@ avconv_deps="avcodec avfilter avformat avresample swscale"
 avconv_select="aformat_filter anull_filter asyncts_filter atrim_filter format_filter
                fps_filter null_filter resample_filter scale_filter
                trim_filter"
-avconv_suggest="dxva2_lib ole32 psapi shell32"
+avconv_suggest="psapi shell32"
 avplay_deps="avcodec avfilter avformat avresample sdl"
 avplay_select="rdft format_filter transpose_filter hflip_filter vflip_filter"
 avplay_suggest="shell32"
@@ -4890,9 +4888,6 @@ fi
 enabled d3d11va &&
     check_type "windows.h d3d11.h" ID3D11VideoDevice ||
     disable d3d11va
-
-enabled dxva2 &&
-    check_lib dxva2_lib windows.h CoTaskMemFree -lole32
 
 enabled vaapi && require vaapi va/va.h vaInitialize -lva
 
