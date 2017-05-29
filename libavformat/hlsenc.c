@@ -392,6 +392,7 @@ static int hls_recover(AVFormatContext *s)
                "Cannot recover the playlist, generating a new one.\n");
         hls->start_sequence = 0;
         hls->sequence = 0;
+        return 0;
     }
 
     read_chomp_line(io, line, sizeof(line));
