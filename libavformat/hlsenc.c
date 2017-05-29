@@ -366,6 +366,14 @@ fail:
     return err;
 }
 
+static int read_chomp_line(AVIOContext *s, char *buf, int maxlen)
+{
+    int len = ff_get_line(s, buf, maxlen);
+    while (len > 0 && av_isspace(buf[len - 1]))
+        buf[--len] = '\0';
+    return len;
+}
+
 static int hls_recover(AVFormatContext *s)
 {
     HLSContext *hls = s->priv_data;
@@ -412,6 +420,7 @@ static int hls_setup(AVFormatContext *s)
     const char *pattern = "%d.ts";
     int basename_size = strlen(s->filename) + strlen(pattern) + 1;
     char *p;
+    int ret;
 
     if (hls->encrypt)
         basename_size += 7;
@@ -432,27 +441,20 @@ static int hls_setup(AVFormatContext *s)
         *p = '\0';
 
     if (hls->encrypt) {
-        int ret = setup_encryption(s);
+        ret = setup_encryption(s);
         if (ret < 0)
             return ret;
     }
 
     if (hls->start_sequence < 0) {
-        if ((ret = hls_recover(s)) < 0)
+        ret = hls_recover(s);
+        if (ret < 0)
             return ret;
     }
 
     av_strlcat(hls->basename, pattern, basename_size);
 
     return 0;
-}
-
-static int read_chomp_line(AVIOContext *s, char *buf, int maxlen)
-{
-    int len = ff_get_line(s, buf, maxlen);
-    while (len > 0 && av_isspace(buf[len - 1]))
-        buf[--len] = '\0';
-    return len;
 }
 
 static int hls_write_header(AVFormatContext *s)
