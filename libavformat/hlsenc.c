@@ -119,7 +119,7 @@ static int setup_encryption(AVFormatContext *s)
     AVIOContext *out = NULL;
     int len, ret;
     uint8_t buf[16];
-    uint8_t *k;
+    uint8_t *k = NULL;
 
     len = strlen(hls->basename) + 4 + 1;
     hls->key_basename = av_mallocz(len);
@@ -144,12 +144,15 @@ static int setup_encryption(AVFormatContext *s)
         if (hls->start_sequence < 0) {
             ret = s->io_open(s, &out, hls->key_basename, AVIO_FLAG_READ, NULL);
             if (ret < 0) {
-                av_log(s, AV_LOG_ERROR,
-                       "Cannot recover the key.\n");
-                return ret;
+                av_log(s, AV_LOG_WARNING,
+                       "Cannot recover the key, generating a new one.\n");
+            } else {
+                avio_read(out, buf, 16);
+                k = buf;
+                avio_close(out);
             }
-            avio_read(out, buf, 16);
-        } else {
+        }
+        if (!k) {
             if ((ret = randomize(buf, sizeof(buf))) < 0) {
                 av_log(s, AV_LOG_ERROR, "Cannot generate a strong random key\n");
                 return ret;
@@ -385,8 +388,10 @@ static int hls_recover(AVFormatContext *s)
 
     ret = s->io_open(s, &io, s->filename, AVIO_FLAG_READ, NULL);
     if (ret < 0) {
-        av_log(s, AV_LOG_ERROR, "Cannot recover the playlist.\n");
-        return ret;
+        av_log(s, AV_LOG_WARNING,
+               "Cannot recover the playlist, generating a new one.\n");
+        hls->start_sequence = 0;
+        hls->sequence = 0;
     }
 
     read_chomp_line(io, line, sizeof(line));
