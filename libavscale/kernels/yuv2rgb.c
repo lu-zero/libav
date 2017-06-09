@@ -46,15 +46,14 @@ static void yuv2rgb(void *ctx,
                              yuvctx->coeffs[e][1] * g +
                              yuvctx->coeffs[e][2] * b);
 
-            // offset for rgb/bgr are already applied
-            dst[0][3 * i] = av_clip_uint8(yuv[0]);
-            dst[1][3 * i] = av_clip_uint8(yuv[1]);
-            dst[2][3 * i] = av_clip_uint8(yuv[2]);
-#if 0
+            dst[0][i] = av_clip_uint8(yuv[0]);
+            dst[1][i] = av_clip_uint8(yuv[1]);
+            dst[2][i] = av_clip_uint8(yuv[2]);
+#if 0 // separate planes vs single plane?
             av_log(ctx, AV_LOG_WARNING,
                    "0x%02X 0x%02X 0x%02X -> 0x%02X 0x%02X 0x%02X\n",
                    src[0][i],     src[1][i >> 1],    src[2][i >> 1],
-                   dst[0][3 * i], dst[0][3 * i + 1], dst[0][3 * i + 2]);
+                   dst[0][i], dst[0][i + 1], dst[0][i + 2]);
 #endif
         }
         src[0] += sstrides[0];
