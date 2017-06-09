@@ -370,7 +370,14 @@ int avscale_config(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
 out:
     ctx->tail = stage;
 
+    return 0;
+
 fail:
+    {
+        const AVPixFmtDescriptor *s_desc = av_pix_fmt_desc_get(src->format);
+        const AVPixFmtDescriptor *d_desc = av_pix_fmt_desc_get(dst->format);
+        av_log(ctx, AV_LOG_ERROR, "Cannot convert from %s to %s\n", s_desc->name, d_desc->name);
+    }
     av_pixformaton_unref(&src_fmt_ref);
     av_pixformaton_unref(&dst_fmt_ref);
 
