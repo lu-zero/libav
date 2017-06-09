@@ -320,7 +320,7 @@ int avscale_config(AVScaleContext *ctx, AVFrame *dst, const AVFrame *src)
     ctx->cur_h   = src->height;
     ctx->dst_w   = dst->width;
     ctx->dst_h   = dst->height;
-    ctx->cur_fmt = ctx->src_fmt;
+    ctx->cur_fmt = ctx->dst_fmt;
 
     if (is_matching_all(ctx->src_fmt, ctx->dst_fmt)) {
         if ((ret = prepare_next_stage(ctx, &stage, "murder")) < 0)
