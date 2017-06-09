@@ -249,6 +249,7 @@ External library support:
   --enable-vaapi   Video Acceleration API (mainly Unix/Intel)
   --enable-vda     Apple Video Decode Acceleration [auto]
   --enable-vdpau   Nvidia Video Decode and Presentation API for Unix [auto]
+  --enable-vce     enable encoding via VCE [no]
 
 Toolchain options:
   --arch=ARCH              select architecture [$arch]
@@ -1341,6 +1342,7 @@ EXTERNAL_LIBRARY_LIST="
     libxcb
     libxcb_shm
     libxcb_xfixes
+    vce
 "
 
 SYSTEM_LIBRARY_LIST="
@@ -2279,6 +2281,7 @@ qsvdec_select="qsv"
 qsvenc_select="qsv"
 qsvvpp_select="qsv"
 vaapi_encode_deps="vaapi"
+vce_deps="LoadLibrary"
 
 hwupload_cuda_filter_deps="cuda"
 scale_npp_filter_deps="cuda libnpp"
@@ -2288,6 +2291,8 @@ h264_nvenc_encoder_deps="nvenc"
 h264_omx_encoder_deps="omx"
 h264_qsv_decoder_select="h264_mp4toannexb_bsf h264_parser qsvdec h264_qsv_hwaccel"
 h264_qsv_encoder_select="qsvenc"
+h264_vce_encoder_deps="vce"
+h265_vce_encoder_deps="vce"
 h264_vaapi_encoder_deps="VAEncPictureParameterBufferH264"
 h264_vaapi_encoder_select="cbs_h264 vaapi_encode"
 hevc_nvenc_encoder_deps="nvenc"
