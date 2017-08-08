@@ -38,6 +38,7 @@ extern const URLProtocol ff_mmsh_protocol;
 extern const URLProtocol ff_mmst_protocol;
 extern const URLProtocol ff_md5_protocol;
 extern const URLProtocol ff_pipe_protocol;
+extern const URLProtocol ff_opensrt_protocol;
 extern const URLProtocol ff_rtmp_protocol;
 extern const URLProtocol ff_rtmpe_protocol;
 extern const URLProtocol ff_rtmps_protocol;

@@ -229,6 +229,7 @@ External library support:
   --enable-libxcb-xfixes     X11 mouse rendering [auto]
   --enable-libxvid           MPEG-4 ASP video encoding
   --enable-openssl           crypto
+  --enable-libsrt            enable Haivision Open SRT protocol [no]
   --enable-zlib              compression [autodetect]
 
   The following libraries provide various hardware acceleration features:
@@ -1371,6 +1372,7 @@ EXTERNAL_LIBRARY_LIST="
     libschroedinger
     libsnappy
     libspeex
+    libsrt
     libtheora
     libtwolame
     libvorbis
@@ -2522,6 +2524,8 @@ librtmpt_protocol_deps="librtmp"
 librtmpte_protocol_deps="librtmp"
 mmsh_protocol_select="http_protocol"
 mmst_protocol_select="network"
+opensrt_protocol_select="network"
+opensrt_protocol_deps="libsrt"
 rtmp_protocol_conflict="librtmp_protocol"
 rtmp_protocol_select="tcp_protocol"
 rtmp_protocol_suggest="zlib"
@@ -4668,6 +4672,7 @@ enabled libopenjpeg       && { check_lib libopenjpeg openjpeg.h opj_version -lop
                                require_pkg_config libopenjpeg libopenjpeg1 openjpeg.h opj_version -DOPJ_STATIC; }
 enabled libopus           && require_pkg_config libopus opus opus_multistream.h opus_multistream_decoder_create
 enabled libpulse          && require_pkg_config libpulse libpulse-simple pulse/simple.h pa_simple_new
+enabled libsrt            && require_pkg_config libsrt "srt >= 1.2.0" srt/srt.h srt_socket
 enabled librtmp           && require_pkg_config librtmp librtmp librtmp/rtmp.h RTMP_Socket
 enabled libschroedinger   && require_pkg_config libschroedinger schroedinger-1.0 schroedinger/schro.h schro_init
 enabled libsnappy         && require libsnappy snappy-c.h snappy_compress -lsnappy
