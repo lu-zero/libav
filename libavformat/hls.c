@@ -374,12 +374,12 @@ static int open_input(struct variant *var)
             if (open_url(var->parent, &pb, seg->key, c->avio_opts) == 0) {
                 ret = avio_read(pb, var->key, sizeof(var->key));
                 if (ret != sizeof(var->key)) {
-                    av_log(NULL, AV_LOG_ERROR, "Unable to read key file %s\n",
+                    av_log(var->parent, AV_LOG_ERROR, "Unable to read key file %s\n",
                            seg->key);
                 }
                 ff_format_io_close(var->parent, &pb);
             } else {
-                av_log(NULL, AV_LOG_ERROR, "Unable to open key file %s\n",
+                av_log(var->parent, AV_LOG_ERROR, "Unable to open key file %s\n",
                        seg->key);
             }
             av_strlcpy(var->key_url, seg->key, sizeof(var->key_url));
@@ -428,7 +428,7 @@ reload:
             reload_interval = v->target_duration / 2;
         }
         if (v->cur_seq_no < v->start_seq_no) {
-            av_log(NULL, AV_LOG_WARNING,
+            av_log(v->parent, AV_LOG_WARNING,
                    "skipping %d segments ahead, expired from playlists\n",
                    v->start_seq_no - v->cur_seq_no);
             v->cur_seq_no = v->start_seq_no;
@@ -521,7 +521,7 @@ static int hls_read_header(AVFormatContext *s)
         goto fail;
 
     if (c->n_variants == 0) {
-        av_log(NULL, AV_LOG_WARNING, "Empty playlist\n");
+        av_log(s, AV_LOG_WARNING, "Empty playlist\n");
         ret = AVERROR_EOF;
         goto fail;
     }
@@ -536,7 +536,7 @@ static int hls_read_header(AVFormatContext *s)
     }
 
     if (c->variants[0]->n_segments == 0) {
-        av_log(NULL, AV_LOG_WARNING, "Empty playlist\n");
+        av_log(s, AV_LOG_WARNING, "Empty playlist\n");
         ret = AVERROR_EOF;
         goto fail;
     }
