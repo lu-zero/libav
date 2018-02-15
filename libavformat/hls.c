@@ -362,6 +362,7 @@ static int open_input(struct variant *var)
 {
     HLSContext *c = var->parent->priv_data;
     struct segment *seg = var->segments[var->cur_seq_no - var->start_seq_no];
+    av_log(var->parent, AV_LOG_VERBOSE, "Opening %s\n", seg->url);
     if (seg->key_type == KEY_NONE) {
         return open_url(var->parent, &var->input, seg->url, c->avio_opts);
     } else if (seg->key_type == KEY_AES_128) {
