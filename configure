@@ -201,6 +201,7 @@ External library support:
   --enable-libilbc           ILBC audio encoding/decoding
   --enable-libjack           JACK audio sound server
   --enable-libkvazaar        HEVC video encoding
+  --enable-libmea            Quality Measurement support
   --enable-libmp3lame        MP3 audio encoding
   --enable-libopencore-amrnb AMR-NB audio encoding/decoding
   --enable-libopencore-amrwb AMR-WB audio decoding
@@ -1366,6 +1367,7 @@ EXTERNAL_LIBRARY_LIST="
     libilbc
     libjack
     libkvazaar
+    libmea
     libmp3lame
     libopencv
     libopenh264
@@ -2572,6 +2574,7 @@ frei0r_src_filter_deps="frei0r libdl"
 hdcd_filter_deps="libhdcd"
 hqdn3d_filter_deps="gpl"
 interlace_filter_deps="gpl"
+measure_filter_deps="libmea"
 movie_filter_deps="avcodec avformat"
 ocv_filter_deps="libopencv"
 overlay_qsv_filter_deps="libmfx"
@@ -4682,6 +4685,7 @@ enabled libgsm            && require libgsm gsm.h gsm_create -lgsm
 enabled libhdcd           && require_pkg_config libhdcd libhdcd "hdcd/hdcd_simple.h" hdcd_new
 enabled libilbc           && require libilbc ilbc.h WebRtcIlbcfix_InitDecode -lilbc
 enabled libkvazaar        && require_pkg_config libkvazaar "kvazaar >= 0.8.1" kvazaar.h kvz_api_get
+enabled libmea            && require_pkg_config libmea "mea >= 0.1" mea.h mea_context_new
 enabled libmfx            && require_pkg_config libmfx libmfx "mfx/mfxvideo.h" MFXInit
 enabled libmp3lame        && require "libmp3lame >= 3.98.3" lame/lame.h lame_set_VBR_quality -lmp3lame
 enabled libnpp            && require libnpp npp.h nppGetLibVersion -lnppi -lnppc
