@@ -40,20 +40,38 @@
 
 typedef struct MeasureContext {
     const AVClass *class;
-
+    char *out_path;
+    FILE *out_file;
     MeaContext *m;
 
     AVFrame *ref;
     AVFrame *rec;
 } MeasureContext;
 
-static av_cold int init(AVFilterContext *ctx, AVDictionary **opts)
+static av_cold int init(AVFilterContext *ctx)
 {
     MeasureContext *s = ctx->priv;
 
+    if (!s->out_path) {
+        s->out_file = stderr;
+    } else {
+        s->out_file = fopen(s->out_path, "w");
+        if (!s->out_file)
+            return AVERROR(EIO);
+    }
+
     s->m = mea_context_new();
-    if (!s->m)
+    if (!s->m) {
+        if (s->out_path)
+            fclose(s->out_file);
         return AVERROR(ENOMEM);
+    }
+
+    fprintf(s->out_file, "%s, %s, %s, %s\n",
+            "ms-ssim",
+            "psnr-y",
+            "psnr-u",
+            "psnr-v");
 
     return 0;
 }
@@ -161,7 +179,7 @@ static void measure_frames(MeasureContext *s)
 
     mea_frame_process(s->m, &ref, &rec, &q);
 
-    fprintf(stderr, "ssim %f\npsnr-y %f\npsnr-u %f\npsnr-v %f\n\n",
+    fprintf(s->out_file, "%f, %f, %f, %f\n",
             q.ssim,
             q.psnr[0],
             q.psnr[1],
@@ -196,6 +214,7 @@ static int request_frame(AVFilterLink *outlink)
 #define OFFSET(x) offsetof(MeasureContext, x)
 #define FLAGS AV_OPT_FLAG_VIDEO_PARAM
 static const AVOption options[] = {
+    {"out_file", "File where to store the per-frame measurements", OFFSET(out_path), AV_OPT_TYPE_STRING, {.str=NULL}, 0, 0, FLAGS },
     { NULL },
 };
 
@@ -238,7 +257,7 @@ AVFilter ff_vf_measure = {
     .name      = "measure",
     .description = NULL_IF_CONFIG_SMALL("Measure the difference between two streams by some metrics"),
 
-    .init_dict = init,
+    .init      = init,
     .uninit    = uninit,
 
     .priv_size = sizeof(MeasureContext),
