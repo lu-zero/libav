@@ -244,8 +244,13 @@ void avio_write(AVIOContext *s, const unsigned char *buf, int size)
 
 void avio_flush(AVIOContext *s)
 {
-    flush_buffer(s);
-    s->must_flush = 0;
+    AVIOInternal *internal = s->opaque;
+    URLContext *h = internal->h;
+
+    if (!h->min_packet_size || s->buf_ptr - s->buffer >= h->min_packet_size) {
+        flush_buffer(s);
+        s->must_flush = 0;
+    }
 }
 
 int64_t avio_seek(AVIOContext *s, int64_t offset, int whence)

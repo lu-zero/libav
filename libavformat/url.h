@@ -46,6 +46,7 @@ typedef struct URLContext {
     char *filename;             /**< specified URL */
     int flags;
     int max_packet_size;        /**< if non zero, the stream is packetized with this max packet size */
+    int min_packet_size;        /**< if non zero, the stream is flushed once at least that number of bytes is enqueued */
     int is_streamed;            /**< true if streamed (no seek possible), default = false */
     int is_connected;
     AVIOInterruptCB interrupt_callback;

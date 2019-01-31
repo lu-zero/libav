@@ -48,6 +48,7 @@ typedef struct UDPContext {
     int ttl;
     int buffer_size;
     int pkt_size;
+    int min_pkt_size;
     int is_multicast;
     int local_port;
     int reuse_socket;
@@ -72,6 +73,7 @@ static const AVOption options[] = {
     { "reuse_socket",   "Reuse socket",                                    OFFSET(reuse_socket),   AV_OPT_TYPE_INT,    { .i64 = -1 },    -1, 1,       .flags = D|E },
     { "connect",        "Connect socket",                                  OFFSET(is_connected),   AV_OPT_TYPE_INT,    { .i64 =  0 },     0, 1,       .flags = D|E },
     { "pkt_size",       "Maximum packet size",                             OFFSET(pkt_size),       AV_OPT_TYPE_INT,    { .i64 = -1 },    -1, INT_MAX, .flags = D|E },
+    { "min_pkt_size",   "Minimum packet size",                             OFFSET(min_pkt_size),   AV_OPT_TYPE_INT,    { .i64 = -1 },    -1, INT_MAX, .flags = D|E },
     { "localaddr",      "Local address",                                   OFFSET(localaddr),      AV_OPT_TYPE_STRING, { .str = NULL },               .flags = D|E },
     { "sources",        "Source list",                                     OFFSET(sources),        AV_OPT_TYPE_STRING, { .str = NULL },               .flags = D|E },
     { "block",          "Block list",                                      OFFSET(block),          AV_OPT_TYPE_STRING, { .str = NULL },               .flags = D|E },
@@ -476,6 +478,9 @@ static int udp_open(URLContext *h, const char *uri, int flags)
     if (s->pkt_size > 0)
         h->max_packet_size = s->pkt_size;
 
+    if (s->min_pkt_size > 0)
+        h->min_packet_size = s->min_pkt_size;
+
     p = strchr(uri, '?');
     if (p) {
         if (av_find_info_tag(buf, sizeof(buf), "reuse", p)) {
@@ -493,6 +498,9 @@ static int udp_open(URLContext *h, const char *uri, int flags)
         }
         if (av_find_info_tag(buf, sizeof(buf), "pkt_size", p)) {
             h->max_packet_size = strtol(buf, NULL, 10);
+        }
+        if (av_find_info_tag(buf, sizeof(buf), "min_pkt_size", p)) {
+            h->min_packet_size = strtol(buf, NULL, 10);
         }
         if (av_find_info_tag(buf, sizeof(buf), "buffer_size", p)) {
             s->buffer_size = strtol(buf, NULL, 10);
