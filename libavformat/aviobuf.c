@@ -244,7 +244,8 @@ void avio_write(AVIOContext *s, const unsigned char *buf, int size)
 
 void avio_flush(AVIOContext *s)
 {
-    flush_buffer(s);
+    if (!s->max_packet_size || s->buf_ptr - s->buffer >= s->max_packet_size)
+        flush_buffer(s);
     s->must_flush = 0;
 }
 
